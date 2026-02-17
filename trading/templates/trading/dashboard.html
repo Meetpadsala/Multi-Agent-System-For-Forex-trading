@@ -1,0 +1,852 @@
+{% extends 'trading/base.html' %}
+
+{% block title %}Dashboard - Forex Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Live Forex Chart</h5>
+                <div class="row">
+                    <div class="col-md-2">
+                        <select id="symbolSelect" class="form-select form-select-sm">
+                            <option value="EURUSD">EUR/USD</option>
+                            <option value="GBPUSD">GBP/USD</option>
+                            <option value="USDJPY">USD/JPY</option>
+                            <option value="USDCHF">USD/CHF</option>
+                            <option value="AUDUSD">AUD/USD</option>
+                            <option value="USDCAD">USD/CAD</option>
+                            <option value="NZDUSD">NZD/USD</option>
+                            <option value="USDINR">USD/INR</option>
+                            <option value="EURGBP">EUR/GBP</option>
+                            <option value="EURJPY">EUR/JPY</option>
+                            <option value="GBPJPY">GBP/JPY</option>
+                            <option value="AUDJPY">AUD/JPY</option>
+                            <option value="CADJPY">CAD/JPY</option>
+                            <option value="CHFJPY">CHF/JPY</option>
+                            <option value="EURCHF">EUR/CHF</option>
+                            <option value="GBPCHF">GBP/CHF</option>
+                            <option value="AUDCHF">AUD/CHF</option>
+                            <option value="EURNZD">EUR/NZD</option>
+                            <option value="GBPNZD">GBP/NZD</option>
+                            <option value="AUDNZD">AUD/NZD</option>
+                            <option value="USDMXN">USD/MXN</option>
+                            <option value="USDZAR">USD/ZAR</option>
+                            <option value="USDTRY">USD/TRY</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="timeframeSelect" class="form-select form-select-sm">
+                            <option value="1m">1 Min</option>
+                            <option value="5m">5 Min</option>
+                            <option value="15m">15 Min</option>
+                            <option value="1h" selected>1 Hour</option>
+                            <option value="1d">1 Day</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mode" id="liveMode" checked>
+                            <label class="form-check-label" for="liveMode">Live</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mode" id="historyMode">
+                            <label class="form-check-label" for="historyMode">History</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="startDate" class="form-control form-control-sm" disabled>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="endDate" class="form-control form-control-sm" disabled>
+                    </div>
+                    <div class="col-md-2">
+                        <button id="refreshBtn" class="btn btn-sm btn-primary w-100">Refresh</button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-3">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button id="zoomInBtn" class="btn btn-outline-secondary">Zoom In</button>
+                            <button id="zoomOutBtn" class="btn btn-outline-secondary">Zoom Out</button>
+                            <button id="resetZoomBtn" class="btn btn-outline-secondary">Reset</button>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="maCheckbox" checked>
+                            <label class="form-check-label" for="maCheckbox">MA</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="rsiCheckbox">
+                            <label class="form-check-label" for="rsiCheckbox">RSI</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="macdCheckbox">
+                            <label class="form-check-label" for="macdCheckbox">MACD</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="bbCheckbox">
+                            <label class="form-check-label" for="bbCheckbox">Bollinger Bands</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="priceInfo" class="mb-2">
+                    <span id="currentPrice" class="badge bg-primary me-2">Price: --</span>
+                    <span id="trendIndicator" class="badge bg-secondary me-2">Trend: --</span>
+                    <span id="signalIndicator" class="badge bg-info">Signal: --</span>
+                </div>
+                <div id="chartContainer" style="position: relative; height: 400px;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Agent Decision</h5>
+            </div>
+            <div class="card-body">
+                <div id="decisionDisplay">
+                    <p class="text-muted">Select a currency pair and click refresh</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Risk Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div id="riskMeter">
+                    <div class="progress mb-2">
+                        <div id="riskBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small id="riskText" class="text-muted">Risk Level: N/A</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Technical Indicators</h5>
+            </div>
+            <div class="card-body">
+                <div id="indicatorsDisplay">
+                    <p class="text-muted">Loading indicators...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Prediction</h5>
+            </div>
+            <div class="card-body">
+                <div id="predictionDisplay">
+                    <p class="text-muted">Loading prediction...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>High Risk Pairs Alert</h5>
+                <button id="refreshHighRiskBtn" class="btn btn-sm btn-warning">Check High Risk Pairs</button>
+            </div>
+            <div class="card-body">
+                <div id="highRiskDisplay">
+                    <p class="text-muted">Click "Check High Risk Pairs" to scan for pairs with risk scores above 70</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+let priceChart;
+let ohlcData = [];
+let allDataPoints = []; // Store all historical data points for real-time updates
+let currentSymbol = 'EURUSD';
+let currentTimeframe = '1h';
+let currentMode = 'live'; // 'live' or 'history'
+let autoUpdateInterval;
+const maxDataPoints = 200;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeChart();
+    setupEventListeners();
+    loadData();
+
+    // Start real-time updates every 10 seconds
+    startAutoUpdate();
+});
+
+function setupEventListeners() {
+    // Symbol selection
+    document.getElementById('symbolSelect').addEventListener('change', function() {
+        currentSymbol = this.value;
+        loadData();
+    });
+
+    // Timeframe selection
+    document.getElementById('timeframeSelect').addEventListener('change', function() {
+        currentTimeframe = this.value;
+        loadData();
+    });
+
+    // Mode selection (Live/History)
+    document.getElementById('liveMode').addEventListener('change', function() {
+        if (this.checked) {
+            currentMode = 'live';
+            document.getElementById('startDate').disabled = true;
+            document.getElementById('endDate').disabled = true;
+            startAutoUpdate();
+            loadData();
+        }
+    });
+
+    document.getElementById('historyMode').addEventListener('change', function() {
+        if (this.checked) {
+            currentMode = 'history';
+            document.getElementById('startDate').disabled = false;
+            document.getElementById('endDate').disabled = false;
+            stopAutoUpdate();
+            // Set default date range (last 30 days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            loadData();
+        }
+    });
+
+    // Date range selection
+    document.getElementById('startDate').addEventListener('change', function() {
+        if (currentMode === 'history') {
+            loadData();
+        }
+    });
+
+    document.getElementById('endDate').addEventListener('change', function() {
+        if (currentMode === 'history') {
+            loadData();
+        }
+    });
+
+    // Zoom controls
+    document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
+    document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
+    document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
+
+    // Indicator checkboxes
+    document.getElementById('maCheckbox').addEventListener('change', updateIndicators);
+    document.getElementById('rsiCheckbox').addEventListener('change', updateIndicators);
+    document.getElementById('macdCheckbox').addEventListener('change', updateIndicators);
+    document.getElementById('bbCheckbox').addEventListener('change', updateIndicators);
+
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+    // High Risk Pairs button
+    document.getElementById('refreshHighRiskBtn').addEventListener('click', loadHighRiskPairs);
+}
+
+function filterSymbols() {
+    const searchTerm = this.value.toUpperCase();
+    const options = document.querySelectorAll('#symbolSelect option');
+
+    options.forEach(option => {
+        const text = option.textContent.toUpperCase();
+        option.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+
+    showSymbolDropdown();
+}
+
+function showSymbolDropdown() {
+    document.getElementById('symbolSelect').style.display = 'block';
+}
+
+function hideSymbolDropdown() {
+    setTimeout(() => {
+        document.getElementById('symbolSelect').style.display = 'none';
+    }, 200);
+}
+
+function initializeChart() {
+    const ctx = document.getElementById('priceChart').getContext('2d');
+
+    priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Price',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1,
+                fill: false,
+                pointRadius: 0,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            if (typeof value === 'number' && !isNaN(value)) {
+                                return `Price: ${value.toFixed(5)}`;
+                            } else {
+                                return `Price: N/A`;
+                            }
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x'
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            minute: 'HH:mm',
+                            hour: 'HH:mm',
+                            day: 'MMM dd'
+                        }
+                    },
+                    ticks: {
+                        maxTicksLimit: 10
+                    }
+                },
+                y: {
+                    position: 'right',
+                    ticks: {
+                        callback: function(value) {
+                            if (typeof value !== 'number' || isNaN(value) || value === 0) {
+                                return 'N/A';
+                            }
+                            // Format based on value magnitude
+                            if (Math.abs(value) >= 100) {
+                                return value.toFixed(2);
+                            } else if (Math.abs(value) >= 1) {
+                                return value.toFixed(4);
+                            } else {
+                                return value.toFixed(5);
+                            }
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(200, 200, 200, 0.3)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChartType() {
+    // Validate and clean the data
+    const validData = ohlcData.filter(d => {
+        const close = parseFloat(d.close);
+        const timestamp = new Date(d.timestamp);
+        return !isNaN(close) && close > 0 && !isNaN(timestamp.getTime());
+    });
+
+    if (validData.length === 0) {
+        console.warn('No valid data points found for chart');
+        // Clear the chart if no data
+        priceChart.data.datasets = [];
+        priceChart.update();
+        return;
+    }
+
+    // Update the main price dataset (always the first dataset)
+    if (priceChart.data.datasets.length === 0) {
+        priceChart.data.datasets.push({
+            label: 'Price',
+            data: [],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.1,
+            fill: false,
+            pointRadius: 0,
+            borderWidth: 2
+        });
+    }
+
+    // Ensure all data points have valid numbers
+    priceChart.data.datasets[0].data = validData.map(d => {
+        const close = parseFloat(d.close);
+        const timestamp = new Date(d.timestamp);
+        return {
+            x: timestamp,
+            y: isNaN(close) ? 0 : close
+        };
+    });
+
+    updateIndicators();
+    priceChart.update('active');
+}
+
+function updateIndicators() {
+    // Clear existing indicator datasets
+    priceChart.data.datasets = priceChart.data.datasets.filter(ds => !ds.label.includes('MA') && !ds.label.includes('RSI') && !ds.label.includes('MACD') && !ds.label.includes('BB'));
+
+    if (ohlcData.length === 0) return;
+
+    const closes = ohlcData.map(d => d.close);
+
+    // Moving Average
+    if (document.getElementById('maCheckbox').checked) {
+        const ma20 = calculateSMA(closes, 20);
+        priceChart.data.datasets.push({
+            label: 'MA(20)',
+            data: ma20.map((val, i) => ({
+                x: new Date(ohlcData[i + 19]?.timestamp),
+                y: val
+            })),
+            borderColor: 'rgb(255, 165, 0)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0
+        });
+    }
+
+    // RSI
+    if (document.getElementById('rsiCheckbox').checked) {
+        const rsi = calculateRSI(closes, 14);
+        // RSI would typically be shown on a separate scale, but for simplicity we'll overlay
+        priceChart.data.datasets.push({
+            label: 'RSI',
+            data: rsi.map((val, i) => ({
+                x: new Date(ohlcData[i + 14]?.timestamp),
+                y: val
+            })),
+            borderColor: 'rgb(255, 0, 255)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0,
+            yAxisID: 'rsi'
+        });
+    }
+
+    // MACD
+    if (document.getElementById('macdCheckbox').checked) {
+        const macd = calculateMACD(closes);
+        priceChart.data.datasets.push({
+            label: 'MACD',
+            data: macd.map((val, i) => ({
+                x: new Date(ohlcData[i + 25]?.timestamp),
+                y: val
+            })),
+            borderColor: 'rgb(0, 255, 255)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0
+        });
+    }
+
+    // Bollinger Bands
+    if (document.getElementById('bbCheckbox').checked) {
+        const bb = calculateBollingerBands(closes, 20, 2);
+        priceChart.data.datasets.push({
+            label: 'BB Upper',
+            data: bb.upper.map((val, i) => ({
+                x: new Date(ohlcData[i + 19]?.timestamp),
+                y: val
+            })),
+            borderColor: 'rgb(255, 0, 0)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0
+        });
+        priceChart.data.datasets.push({
+            label: 'BB Lower',
+            data: bb.lower.map((val, i) => ({
+                x: new Date(ohlcData[i + 19]?.timestamp),
+                y: val
+            })),
+            borderColor: 'rgb(255, 0, 0)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0
+        });
+    }
+
+    priceChart.update();
+}
+
+function calculateSMA(data, period) {
+    const result = [];
+    for (let i = period - 1; i < data.length; i++) {
+        const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+        result.push(sum / period);
+    }
+    return result;
+}
+
+function calculateRSI(data, period) {
+    const gains = [];
+    const losses = [];
+
+    for (let i = 1; i < data.length; i++) {
+        const change = data[i] - data[i - 1];
+        gains.push(change > 0 ? change : 0);
+        losses.push(change < 0 ? -change : 0);
+    }
+
+    const avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    const avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+
+    const result = [];
+    let currentAvgGain = avgGain;
+    let currentAvgLoss = avgLoss;
+
+    for (let i = period; i < gains.length; i++) {
+        currentAvgGain = (currentAvgGain * (period - 1) + gains[i]) / period;
+        currentAvgLoss = (currentAvgLoss * (period - 1) + losses[i]) / period;
+
+        const rs = currentAvgGain / currentAvgLoss;
+        result.push(100 - (100 / (1 + rs)));
+    }
+
+    return result;
+}
+
+function calculateMACD(data) {
+    const ema12 = calculateEMA(data, 12);
+    const ema26 = calculateEMA(data, 26);
+    const macd = [];
+
+    for (let i = 0; i < Math.min(ema12.length, ema26.length); i++) {
+        macd.push(ema12[i + 14] - ema26[i]);
+    }
+
+    return macd;
+}
+
+function calculateEMA(data, period) {
+    const multiplier = 2 / (period + 1);
+    const result = [data[0]];
+
+    for (let i = 1; i < data.length; i++) {
+        result.push((data[i] - result[i - 1]) * multiplier + result[i - 1]);
+    }
+
+    return result;
+}
+
+function calculateBollingerBands(data, period, stdDev) {
+    const sma = calculateSMA(data, period);
+    const upper = [];
+    const lower = [];
+
+    for (let i = 0; i < sma.length; i++) {
+        const slice = data.slice(i, i + period);
+        const mean = sma[i];
+        const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
+        const sd = Math.sqrt(variance);
+
+        upper.push(mean + (stdDev * sd));
+        lower.push(mean - (stdDev * sd));
+    }
+
+    return { upper, lower };
+}
+
+async function loadData() {
+    const symbol = currentSymbol;
+    const timeframe = currentTimeframe;
+
+    let url = `/api/forex/${symbol}/?timeframe=${timeframe}&limit=${maxDataPoints}`;
+
+    // Add date parameters for history mode
+    if (currentMode === 'history') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        if (startDate && endDate) {
+            url += `&start_date=${startDate}&end_date=${endDate}`;
+        }
+    }
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Update OHLC data with real-time updates
+        const newData = data.historical_ohlc || [];
+
+        if (currentMode === 'live') {
+            // For live mode, update with new data points
+            updateRealTimeData(newData);
+        } else {
+            // For history mode, replace all data
+            allDataPoints = newData;
+            ohlcData = newData;
+        }
+
+        // Update price info
+        updatePriceInfo(data);
+
+        // Update chart
+        updateChartType();
+
+        // Update decision
+        updateDecision(data.decision);
+
+        // Update risk meter
+        if (data.decision && data.decision.risk) {
+            updateRiskMeter(data.decision.risk.risk_score);
+        }
+
+        // Update indicators display
+        if (data.decision && data.decision.technical_indicators) {
+            updateIndicatorsDisplay(data.decision.technical_indicators);
+        }
+
+        // Update prediction
+        if (data.prediction) {
+            updatePrediction(data.prediction);
+        }
+
+    } catch (error) {
+        console.error('Error loading data:', error);
+        alert('Error loading data: ' + error.message);
+    }
+}
+
+function updateRealTimeData(newData) {
+    if (!newData || newData.length === 0) return;
+
+    // If this is the first load, initialize allDataPoints
+    if (allDataPoints.length === 0) {
+        allDataPoints = newData;
+        ohlcData = newData;
+        return;
+    }
+
+    // Find the latest timestamp in our current data
+    const latestTimestamp = allDataPoints.length > 0 ?
+        new Date(Math.max(...allDataPoints.map(d => new Date(d.timestamp).getTime()))) :
+        new Date(0);
+
+    // Filter new data points that are newer than our latest
+    const newDataPoints = newData.filter(d => {
+        const dataTimestamp = new Date(d.timestamp);
+        return dataTimestamp > latestTimestamp;
+    });
+
+    // Add new data points to our collection
+    if (newDataPoints.length > 0) {
+        allDataPoints = [...allDataPoints, ...newDataPoints];
+
+        // Keep only the most recent maxDataPoints
+        if (allDataPoints.length > maxDataPoints) {
+            allDataPoints = allDataPoints.slice(-maxDataPoints);
+        }
+
+        ohlcData = allDataPoints;
+        console.log(`Added ${newDataPoints.length} new data points. Total: ${allDataPoints.length}`);
+    } else {
+        // No new data, but update ohlcData to ensure consistency
+        ohlcData = allDataPoints;
+    }
+}
+
+function updatePriceInfo(data) {
+    const currentPrice = data.current_price ? data.current_price.toFixed(5) : '--';
+    const trend = data.prediction ? data.prediction.trend : '--';
+    const signal = data.decision ? data.decision.decision : '--';
+
+    document.getElementById('currentPrice').textContent = `Price: ${currentPrice}`;
+    document.getElementById('trendIndicator').textContent = `Trend: ${trend}`;
+    document.getElementById('signalIndicator').textContent = `Signal: ${signal}`;
+
+    // Update badge colors
+    document.getElementById('trendIndicator').className = `badge bg-${trend === 'UP' ? 'success' : trend === 'DOWN' ? 'danger' : 'secondary'}`;
+    document.getElementById('signalIndicator').className = `badge bg-${signal === 'BUY' ? 'success' : signal === 'SELL' ? 'danger' : 'warning'}`;
+}
+
+function updateDecision(decision) {
+    const display = document.getElementById('decisionDisplay');
+    if (!decision) {
+        display.innerHTML = '<p class="text-muted">No decision available</p>';
+        return;
+    }
+
+    const decisionClass = decision.decision === 'BUY' ? 'success' :
+                         decision.decision === 'SELL' ? 'danger' : 'warning';
+
+    const profitProb = decision.profit_probability ? decision.profit_probability.toFixed(1) : 'N/A';
+    const confidence = decision.confidence ? decision.confidence.toFixed(1) : 'N/A';
+
+    display.innerHTML = `
+        <h4 class="text-${decisionClass}">${decision.decision}</h4>
+        <p>Profit Probability: ${profitProb}%</p>
+        <p>Confidence: ${confidence}%</p>
+    `;
+}
+
+function updateRiskMeter(riskScore) {
+    const riskBar = document.getElementById('riskBar');
+    const riskText = document.getElementById('riskText');
+
+    const score = riskScore || 0;
+    riskBar.style.width = `${score}%`;
+
+    let riskClass = 'bg-success';
+    let riskLevel = 'Low';
+
+    if (score > 70) {
+        riskClass = 'bg-danger';
+        riskLevel = 'High';
+    } else if (score > 40) {
+        riskClass = 'bg-warning';
+        riskLevel = 'Medium';
+    }
+
+    riskBar.className = `progress-bar ${riskClass}`;
+    riskText.textContent = `Risk Level: ${riskLevel} (${score.toFixed(1)}%)`;
+}
+
+function updateIndicatorsDisplay(indicators) {
+    const display = document.getElementById('indicatorsDisplay');
+    const rsi = indicators.rsi ? indicators.rsi.toFixed(2) : 'N/A';
+    const macd = indicators.macd ? indicators.macd.toFixed(5) : 'N/A';
+    const sma20 = indicators.sma_20 ? indicators.sma_20.toFixed(5) : 'N/A';
+
+    display.innerHTML = `
+        <p><strong>RSI:</strong> ${rsi}</p>
+        <p><strong>MACD:</strong> ${macd}</p>
+        <p><strong>SMA 20:</strong> ${sma20}</p>
+    `;
+}
+
+function updatePrediction(prediction) {
+    const display = document.getElementById('predictionDisplay');
+    const price = prediction.price ? prediction.price.toFixed(5) : 'N/A';
+    const trend = prediction.trend || 'N/A';
+    const confidence = prediction.confidence ? prediction.confidence.toFixed(1) : 'N/A';
+
+    display.innerHTML = `
+        <p><strong>Predicted Price:</strong> ${price}</p>
+        <p><strong>Trend:</strong> <span class="badge bg-${trend === 'UP' ? 'success' : 'danger'}">${trend}</span></p>
+        <p><strong>Confidence:</strong> ${confidence}%</p>
+    `;
+}
+
+function startAutoUpdate() {
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+    }
+    if (currentMode === 'live') {
+        autoUpdateInterval = setInterval(loadData, 10000);
+    }
+}
+
+function stopAutoUpdate() {
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+        autoUpdateInterval = null;
+    }
+}
+
+function zoomIn() {
+    priceChart.zoom(1.2);
+}
+
+function zoomOut() {
+    priceChart.zoom(0.8);
+}
+
+function resetZoom() {
+    priceChart.resetZoom();
+}
+
+async function loadHighRiskPairs() {
+    const button = document.getElementById('refreshHighRiskBtn');
+    const originalText = button.textContent;
+    button.textContent = 'Scanning...';
+    button.disabled = true;
+
+    try {
+        const response = await fetch('/api/high-risk-pairs/');
+        const data = await response.json();
+
+        const display = document.getElementById('highRiskDisplay');
+
+        if (data.high_risk_pairs && data.high_risk_pairs.length > 0) {
+            let html = '<div class="alert alert-danger"><h6>⚠️ High Risk Pairs Detected:</h6><ul class="mb-0">';
+
+            data.high_risk_pairs.forEach(pair => {
+                html += `<li><strong>${pair.symbol}</strong> - Risk Score: ${pair.risk_score}% (${pair.risk_level})</li>`;
+            });
+
+            html += '</ul></div>';
+            html += '<p class="text-muted mt-2">These pairs show extreme volatility or technical conditions that may lead to significant price movements. Exercise caution when trading these pairs.</p>';
+
+            display.innerHTML = html;
+        } else {
+            display.innerHTML = '<div class="alert alert-success">✅ No high-risk pairs detected at this time. All pairs show normal risk levels.</div>';
+        }
+
+    } catch (error) {
+        console.error('Error loading high risk pairs:', error);
+        document.getElementById('highRiskDisplay').innerHTML = '<div class="alert alert-danger">Error loading high risk pairs data.</div>';
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
+</script>
+{% endblock %}
+

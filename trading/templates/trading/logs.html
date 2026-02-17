@@ -1,0 +1,76 @@
+{% extends 'trading/base.html' %}
+
+{% block title %}Agent Logs - Forex Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Agent Activity Logs</h5>
+                <button id="refreshLogs" class="btn btn-sm btn-primary">Refresh</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="logsTable">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Action</th>
+                                <th>Result</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Loading logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadLogs();
+    document.getElementById('refreshLogs').addEventListener('click', loadLogs);
+});
+
+async function loadLogs() {
+    const tbody = document.getElementById('logsBody');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+
+    try {
+        const response = await fetch('/api/logs/');
+        const data = await response.json();
+
+        tbody.innerHTML = '';
+
+        if (data.logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No logs available</td></tr>';
+            return;
+        }
+
+        data.logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="badge bg-secondary">${log.agent}</span></td>
+                <td>${log.action}</td>
+                <td><small>${log.result}</small></td>
+                <td><small>${new Date(log.timestamp).toLocaleString()}</small></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading logs</td></tr>';
+    }
+}
+</script>
+{% endblock %}
