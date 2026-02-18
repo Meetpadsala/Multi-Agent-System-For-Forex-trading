@@ -66,13 +66,6 @@
                     </div>
                 </div>
                 <div class="row mt-2">
-                    <div class="col-md-3">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button id="zoomInBtn" class="btn btn-outline-secondary">Zoom In</button>
-                            <button id="zoomOutBtn" class="btn btn-outline-secondary">Zoom Out</button>
-                            <button id="resetZoomBtn" class="btn btn-outline-secondary">Reset</button>
-                        </div>
-                    </div>
                     <div class="col-md-9">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="maCheckbox" checked>
@@ -168,6 +161,12 @@
                 <button id="refreshHighRiskBtn" class="btn btn-sm btn-warning">Check High Risk Pairs</button>
             </div>
             <div class="card-body">
+                <div id="highRiskProgress" class="mb-2" style="display: none;">
+                    <div class="progress" style="height: 20px;">
+                        <div id="highRiskProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small id="highRiskProgressText" class="text-muted">Scanning...</small>
+                </div>
                 <div id="highRiskDisplay">
                     <p class="text-muted">Click "Check High Risk Pairs" to scan for pairs with risk scores above 70</p>
                 </div>
@@ -251,11 +250,6 @@ function setupEventListeners() {
             loadData();
         }
     });
-
-    // Zoom controls
-    document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
-    document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
-    document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
 
     // Indicator checkboxes
     document.getElementById('maCheckbox').addEventListener('change', updateIndicators);

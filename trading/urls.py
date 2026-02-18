@@ -11,5 +11,6 @@ urlpatterns = [
     path('logs/', views.agent_logs, name='agent_logs'),
     path('api/forex/<str:symbol>/', views.ForexDataAPI.as_view(), name='forex_data_api'),
     path('api/logs/', views.AgentLogsAPI.as_view(), name='agent_logs_api'),
+    path('api/agent-status/', views.AgentStatusAPI.as_view(), name='agent_status_api'),
     path('api/high-risk-pairs/', views.HighRiskPairsAPI.as_view(), name='high_risk_pairs_api'),
 ]

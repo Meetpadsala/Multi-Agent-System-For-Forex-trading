@@ -12,12 +12,12 @@ import math
 from datetime import datetime, timedelta
 try:
     from .agents import DecisionAgent
-    AGENTS_AVAILABLE = True
+    AGENTS_AVAILABLE = True  # Disable agents for debugging
 except ImportError as e:
     print(f"Warning: Agents not available due to: {e}")
     AGENTS_AVAILABLE = False
     DecisionAgent = None
-from .models import ForexData, Prediction, AgentLog, UserProfile
+from .models import ForexData, Prediction, AgentLog, UserProfile, AgentStatus
 from .real_data_fetcher import real_data_fetcher
 
 def home(request):
@@ -109,8 +109,8 @@ class ForexDataAPI(View):
             now = timezone.now()
             if start_date and end_date:
                 # History mode - use date range
-                start_dt = timezone.datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
-                end_dt = timezone.datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
+                start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
                 # Get data within date range
                 historical_data = ForexData.objects.filter(
                     symbol=symbol,
@@ -258,8 +258,10 @@ class ForexDataAPI(View):
             return JsonResponse(data)
 
         except Exception as e:
+            import traceback
             print(f"Error in ForexDataAPI.get: {e}")
-            return JsonResponse({'error': str(e)})
+            traceback.print_exc()
+            return JsonResponse({'error': str(e), 'traceback': traceback.format_exc()})
 
     def post(self, request, symbol):
         """Trigger data fetch for a symbol"""
@@ -276,7 +278,8 @@ class ForexDataAPI(View):
     def _generate_mock_data(self, symbol):
         """Generate mock forex data"""
         base_prices = {
-            'EURUSD': 1.08, 'GBPUSD': 1.27, 'USDJPY': 150.0, 'USDINR': 83.0,
+            'EURUSD': 1.08, 'GBPUSD': 1.27, 'USDJPY': 150.0, 'USDCHF': 0.88,
+            'AUDUSD': 0.65, 'USDCAD': 1.36, 'NZDUSD': 0.61, 'USDINR': 83.0,
             'EURGBP': 0.85, 'EURJPY': 162.0, 'GBPJPY': 190.0, 'AUDJPY': 98.0,
             'CADJPY': 110.0, 'CHFJPY': 165.0, 'EURCHF': 0.95, 'GBPCHF': 1.12,
             'AUDCHF': 0.58, 'EURNZD': 1.75, 'GBPNZD': 2.05, 'AUDNZD': 1.08,
@@ -328,12 +331,15 @@ class ForexDataAPI(View):
             }
 
         # Calculate indicators with minimum data requirements
-        rsi = self._calculate_rsi(closes, min(len(closes)-1, 14))
+        # Use max(1, ...) to ensure positive period values
+        rsi_period = max(1, min(len(closes)-1, 14))
+        rsi = self._calculate_rsi(closes, rsi_period)
         macd = self._calculate_macd(closes) if len(closes) >= 12 else None
-        sma_20 = sum(closes[-min(20, len(closes)):]) / min(20, len(closes))
+        sma_period = max(1, min(20, len(closes)))
+        sma_20 = sum(closes[-sma_period:]) / sma_period
 
         # Calculate Bollinger Bands with adaptive period
-        period = min(20, len(closes))
+        period = max(1, min(20, len(closes)))
         bollinger_upper, bollinger_lower = self._calculate_bollinger_bands(closes, period)
 
         return {
@@ -432,298 +438,183 @@ class ForexDataAPI(View):
 
     def _generate_mock_decision(self, symbol):
         """Generate decision based on real technical analysis when agents are not available"""
-        import random
 
-        # Get historical data for technical indicators calculation
+        import random
+        import time
+        import statistics
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # ---------------- SAFE DIVIDE FUNCTION ---------------- #
+        def safe_divide(a, b, default=0):
+            try:
+                return a / b if b not in (0, None) else default
+            except:
+                return default
+        # ------------------------------------------------------ #
+
         now = timezone.now()
         historical_data = ForexData.objects.filter(
             symbol=symbol,
             timestamp__gte=now - timedelta(hours=24)
         ).order_by('timestamp')[:100]
 
-        # If no historical data, generate some mock data for analysis
         if not historical_data:
             historical_data = self._generate_mock_historical_data(symbol, 50, '1h')
 
-        # Calculate real technical indicators
         technical_indicators = self._calculate_technical_indicators(historical_data)
 
-        # Make decision based on technical indicators with enhanced logic
         decision = 'HOLD'
-        confidence = 65.0  # Higher base confidence
+        confidence = 65.0
         profit_probability = 55.0
 
-        # RSI-based decision (primary indicator)
-        if technical_indicators['rsi'] is not None:
-            rsi = technical_indicators['rsi']
+        # ---------------- RSI ---------------- #
+        rsi = technical_indicators.get('rsi')
+        if rsi is not None:
             if rsi < 35:
-                decision = 'BUY'  # Strong oversold condition
-                confidence = min(95, 60 + (35 - rsi) * 3)  # Higher confidence for more oversold
+                decision = 'BUY'
+                confidence = min(95, 60 + (35 - rsi) * 3)
                 profit_probability = confidence
             elif rsi < 45:
-                decision = 'BUY'  # Moderate oversold
+                decision = 'BUY'
                 confidence = 75.0
-                profit_probability = 65.0
-            elif rsi > 65:
-                decision = 'SELL'  # Moderate overbought
-                confidence = 75.0
-                profit_probability = 65.0
             elif rsi > 75:
-                decision = 'SELL'  # Strong overbought condition
-                confidence = min(95, 60 + (rsi - 75) * 3)  # Higher confidence for more overbought
+                decision = 'SELL'
+                confidence = min(95, 60 + (rsi - 75) * 3)
                 profit_probability = confidence
+            elif rsi > 65:
+                decision = 'SELL'
+                confidence = 75.0
             else:
                 decision = 'HOLD'
                 confidence = 70.0
-                profit_probability = 50.0
 
-        # MACD confirmation (secondary indicator)
+        # ---------------- MACD ---------------- #
+        macd = technical_indicators.get('macd')
         macd_signal_strength = 0
-        if technical_indicators['macd'] is not None:
-            macd = technical_indicators['macd']
+
+        if macd is not None:
             if macd > 0.001:
-                macd_signal_strength = 15  # Strong bullish
+                macd_signal_strength = 15
             elif macd > 0.0005:
-                macd_signal_strength = 10  # Moderate bullish
+                macd_signal_strength = 10
             elif macd < -0.001:
-                macd_signal_strength = -15  # Strong bearish
+                macd_signal_strength = -15
             elif macd < -0.0005:
-                macd_signal_strength = -10  # Moderate bearish
+                macd_signal_strength = -10
 
-            # Adjust confidence based on MACD confirmation
-            if (decision == 'BUY' and macd_signal_strength > 0) or (decision == 'SELL' and macd_signal_strength < 0):
+            if (decision == 'BUY' and macd_signal_strength > 0) or \
+               (decision == 'SELL' and macd_signal_strength < 0):
                 confidence = min(95, confidence + abs(macd_signal_strength))
-                profit_probability = min(90, profit_probability + abs(macd_signal_strength) * 0.8)
-            elif (decision == 'BUY' and macd_signal_strength < 0) or (decision == 'SELL' and macd_signal_strength > 0):
+            elif (decision == 'BUY' and macd_signal_strength < 0) or \
+                 (decision == 'SELL' and macd_signal_strength > 0):
                 confidence = max(45, confidence - abs(macd_signal_strength))
-                profit_probability = max(40, profit_probability - abs(macd_signal_strength) * 0.6)
 
-        # Moving Average trend analysis
-        if technical_indicators['sma_20'] is not None and historical_data:
-            current_price = float(historical_data[-1].close_price)
-            sma_20 = technical_indicators['sma_20']
+        # ---------------- Historical List ---------------- #
+        historical_data_list = list(historical_data)
+        if not historical_data_list:
+            return None
 
-            price_vs_ma = (current_price - sma_20) / sma_20 * 100  # Percentage difference
+        current_price = float(historical_data_list[-1].close_price)
 
-            if price_vs_ma > 1.0:  # Price 1% above MA
+        # ---------------- SMA Trend ---------------- #
+        sma_20 = technical_indicators.get('sma_20')
+
+        if sma_20 not in (None, 0):
+            price_vs_ma = safe_divide(current_price - sma_20, sma_20) * 100
+
+            if price_vs_ma > 1:
                 if decision == 'BUY':
                     confidence = min(95, confidence + 8)
                 elif decision == 'HOLD':
                     decision = 'BUY'
-                    confidence = 72.0
-            elif price_vs_ma < -1.0:  # Price 1% below MA
+                    confidence = 72
+            elif price_vs_ma < -1:
                 if decision == 'SELL':
                     confidence = min(95, confidence + 8)
                 elif decision == 'HOLD':
                     decision = 'SELL'
-                    confidence = 72.0
+                    confidence = 72
 
-        # Advanced Risk Analysis System with Multi-Factor Assessment
-        import random
-        import time
-        import statistics
+        # ---------------- Volatility ---------------- #
+        risk_components = {k: 0 for k in [
+            'market_volatility','trend_risk','momentum_risk',
+            'overbought_oversold','band_position',
+            'price_action','time_based','market_noise'
+        ]}
 
-        # Initialize risk components
-        risk_components = {
-            'market_volatility': 0,
-            'trend_risk': 0,
-            'momentum_risk': 0,
-            'overbought_oversold': 0,
-            'band_position': 0,
-            'price_action': 0,
-            'time_based': 0,
-            'market_noise': 0
-        }
+        if len(historical_data_list) > 5:
+            recent_prices = [float(d.close_price) for d in historical_data_list[-20:]]
+            valid_prices = [p for p in recent_prices if p > 0]
 
-        # 1. Market Volatility Risk (based on recent price movements)
-        if historical_data and len(historical_data) > 5:
-            recent_prices = [float(d.close_price) for d in historical_data[-20:]]
-            if len(recent_prices) > 1:
-                # Calculate various volatility measures
-                returns = [(recent_prices[i] - recent_prices[i-1]) / recent_prices[i-1]
-                          for i in range(1, len(recent_prices))]
-                volatility = statistics.stdev(returns) * 100 if len(returns) > 1 else 0
+            returns = []
+            for i in range(1, len(valid_prices)):
+                returns.append(safe_divide(
+                    valid_prices[i] - valid_prices[i-1],
+                    valid_prices[i-1]
+                ))
 
-                # Average True Range (ATR) approximation
-                true_ranges = []
-                for i in range(1, len(recent_prices)):
-                    high = max(recent_prices[i], recent_prices[i-1])
-                    low = min(recent_prices[i], recent_prices[i-1])
-                    tr = high - low
-                    true_ranges.append(tr)
-                atr = sum(true_ranges) / len(true_ranges) if true_ranges else 0
-                atr_percentage = (atr / recent_prices[-1]) * 100
+            volatility = statistics.stdev(returns) * 100 if len(returns) > 1 else 0
 
-                # Combine volatility measures
-                combined_volatility = (volatility + atr_percentage) / 2
-                risk_components['market_volatility'] = min(combined_volatility * 5, 25)
+            true_ranges = [
+                abs(recent_prices[i] - recent_prices[i-1])
+                for i in range(1, len(recent_prices))
+            ]
 
-        # 2. Trend Risk (based on moving averages and trend strength)
-        if technical_indicators['sma_20'] is not None and historical_data:
-            current_price = float(historical_data[-1].close_price)
-            sma_20 = technical_indicators['sma_20']
+            atr = sum(true_ranges) / len(true_ranges) if true_ranges else 0
+            atr_percentage = safe_divide(atr, recent_prices[-1]) * 100
 
-            # Trend strength
-            trend_deviation = abs(current_price - sma_20) / sma_20 * 100
+            combined_volatility = (volatility + atr_percentage) / 2
+            risk_components['market_volatility'] = min(combined_volatility * 5, 25)
 
-            # Trend direction consistency (check if price is consistently above/below MA)
-            if len(historical_data) > 10:
-                recent_trend = sum(1 if float(h.close_price) > sma_20 else -1
-                                  for h in historical_data[-10:])
-                trend_consistency = abs(recent_trend) / 10 * 100
+        # ---------------- Trend Risk ---------------- #
+        if sma_20 not in (None, 0):
+            trend_deviation = safe_divide(abs(current_price - sma_20), sma_20) * 100
+            if trend_deviation > 3:
+                risk_components['trend_risk'] = 15
+            elif trend_deviation > 1:
+                risk_components['trend_risk'] = 8
 
-                if trend_deviation > 3:  # Strong trend
-                    risk_components['trend_risk'] = 15 if trend_consistency > 70 else 8
-                elif trend_deviation > 1:  # Moderate trend
-                    risk_components['trend_risk'] = 8 if trend_consistency > 60 else 5
+        # ---------------- Price Action ---------------- #
+        if len(historical_data_list) > 5:
+            recent_prices = [float(d.close_price) for d in historical_data_list[-5:]]
 
-        # 3. Momentum Risk (MACD and momentum indicators)
-        if technical_indicators['macd'] is not None:
-            macd = technical_indicators['macd']
-            macd_strength = abs(macd)
-
-            if macd_strength > 0.003:  # Very strong momentum
-                risk_components['momentum_risk'] = 20
-            elif macd_strength > 0.002:  # Strong momentum
-                risk_components['momentum_risk'] = 15
-            elif macd_strength > 0.001:  # Moderate momentum
-                risk_components['momentum_risk'] = 10
-            elif macd_strength > 0.0005:  # Weak momentum
-                risk_components['momentum_risk'] = 5
-
-        # 4. Overbought/Oversold Risk (RSI extreme levels)
-        if technical_indicators['rsi'] is not None:
-            rsi = technical_indicators['rsi']
-
-            if rsi < 25 or rsi > 75:  # Extreme levels
-                risk_components['overbought_oversold'] = 25
-                confidence = max(45, confidence - 20)  # Significant confidence reduction
-            elif rsi < 30 or rsi > 70:  # Very high risk levels
-                risk_components['overbought_oversold'] = 18
-                confidence = max(50, confidence - 15)
-            elif rsi < 35 or rsi > 65:  # High risk levels
-                risk_components['overbought_oversold'] = 12
-                confidence = max(55, confidence - 10)
-            elif rsi < 40 or rsi > 60:  # Moderate risk levels
-                risk_components['overbought_oversold'] = 6
-                confidence = max(60, confidence - 5)
-
-        # 5. Bollinger Band Position Risk
-        if technical_indicators['bollinger_upper'] is not None and technical_indicators['bollinger_lower'] is not None:
-            current_price = float(historical_data[-1].close_price) if historical_data else 1.0
-            upper = technical_indicators['bollinger_upper']
-            lower = technical_indicators['bollinger_lower']
-            middle = (upper + lower) / 2
-
-            # Calculate position within bands
-            band_width = upper - lower
-            if band_width > 0:
-                position_from_lower = (current_price - lower) / band_width
-
-                if position_from_lower < 0.05 or position_from_lower > 0.95:  # Touching bands
-                    risk_components['band_position'] = 30
-                    confidence = max(40, confidence - 25)
-                elif position_from_lower < 0.1 or position_from_lower > 0.9:  # Very close to bands
-                    risk_components['band_position'] = 22
-                    confidence = max(45, confidence - 18)
-                elif position_from_lower < 0.15 or position_from_lower > 0.85:  # Close to bands
-                    risk_components['band_position'] = 15
-                    confidence = max(50, confidence - 12)
-                elif position_from_lower < 0.25 or position_from_lower > 0.75:  # Approaching bands
-                    risk_components['band_position'] = 8
-                    confidence = max(55, confidence - 8)
-                elif position_from_lower >= 0.4 and position_from_lower <= 0.6:  # Middle zone (low risk)
-                    risk_components['band_position'] = -5  # Reduce risk
-                    confidence = min(95, confidence + 3)
-
-        # 6. Price Action Risk (recent price patterns)
-        if historical_data and len(historical_data) > 5:
-            recent_prices = [float(d.close_price) for d in historical_data[-5:]]
-
-            # Check for sharp movements
             if len(recent_prices) >= 3:
-                recent_change = abs(recent_prices[-1] - recent_prices[-3]) / recent_prices[-3] * 100
-                if recent_change > 2:  # Sharp 2%+ move in 3 periods
+                recent_change = safe_divide(
+                    abs(recent_prices[-1] - recent_prices[-3]),
+                    recent_prices[-3]
+                ) * 100
+
+                if recent_change > 2:
                     risk_components['price_action'] = 12
-                elif recent_change > 1:  # Sharp 1%+ move
+                elif recent_change > 1:
                     risk_components['price_action'] = 8
 
-            # Check for consolidation vs breakout
+            avg_price = safe_divide(sum(recent_prices), len(recent_prices))
             price_range = max(recent_prices) - min(recent_prices)
-            avg_price = sum(recent_prices) / len(recent_prices)
-            range_percentage = (price_range / avg_price) * 100
+            range_percentage = safe_divide(price_range, avg_price) * 100
 
-            if range_percentage < 0.2:  # Very tight consolidation
-                risk_components['price_action'] += 8  # Breakout potential
-            elif range_percentage > 1.5:  # Wide range (volatile)
+            if range_percentage < 0.2:
+                risk_components['price_action'] += 8
+            elif range_percentage > 1.5:
                 risk_components['price_action'] += 6
 
-        # 7. Time-based Risk Variation
-        time_seed = int(time.time()) % 120  # 2-minute cycle
-        risk_components['time_based'] = (time_seed / 120.0) * 15  # 0-15 range
-
-        # 8. Market Noise (random factor for realism)
+        # ---------------- Time + Noise ---------------- #
+        risk_components['time_based'] = (int(time.time()) % 120) / 120 * 15
         risk_components['market_noise'] = random.uniform(-6, 6)
 
-        # Calculate weighted risk score
         weights = {
-            'market_volatility': 1.2,
-            'trend_risk': 1.0,
-            'momentum_risk': 0.9,
-            'overbought_oversold': 1.3,
-            'band_position': 1.4,
-            'price_action': 0.8,
-            'time_based': 0.6,
-            'market_noise': 0.4
+            'market_volatility':1.2,'trend_risk':1.0,
+            'momentum_risk':0.9,'overbought_oversold':1.3,
+            'band_position':1.4,'price_action':0.8,
+            'time_based':0.6,'market_noise':0.4
         }
 
-        weighted_risk = sum(risk_components[comp] * weights[comp] for comp in risk_components)
+        weighted_risk = sum(
+            risk_components[k] * weights[k] for k in risk_components
+        )
 
-        # Base risk level (market baseline)
-        base_risk = 25.0
-
-        # Final risk score calculation
-        risk_score = base_risk + weighted_risk
-
-        # Apply risk score bounds with more sophisticated clamping
-        if risk_score < 0:
-            risk_score = max(0, risk_score + 5)  # Allow slightly negative but clamp to 0
-        elif risk_score > 100:
-            risk_score = min(100, risk_score - 5)  # Allow slightly over but clamp to 100
-        else:
-            risk_score = max(5, min(95, risk_score))  # Normal bounds with small buffer
-
-        # Determine sentiment based on trend indicators
-        sentiment = 'NEUTRAL'
-        bullish_signals = 0
-        bearish_signals = 0
-
-        if technical_indicators['macd'] is not None:
-            if technical_indicators['macd'] > 0.0002:
-                bullish_signals += 1
-            elif technical_indicators['macd'] < -0.0002:
-                bearish_signals += 1
-
-        if technical_indicators['rsi'] is not None:
-            if technical_indicators['rsi'] < 45:
-                bullish_signals += 1
-            elif technical_indicators['rsi'] > 55:
-                bearish_signals += 1
-
-        if bullish_signals > bearish_signals:
-            sentiment = 'POSITIVE'
-        elif bearish_signals > bullish_signals:
-            sentiment = 'NEGATIVE'
-
-        # Final adjustments based on sentiment
-        if sentiment == 'POSITIVE' and decision == 'BUY':
-            confidence = min(95, confidence + 5)
-        elif sentiment == 'NEGATIVE' and decision == 'SELL':
-            confidence = min(95, confidence + 5)
-        elif sentiment == 'POSITIVE' and decision == 'SELL':
-            confidence = max(50, confidence - 10)
-        elif sentiment == 'NEGATIVE' and decision == 'BUY':
-            confidence = max(50, confidence - 10)
+        risk_score = max(5, min(95, 25 + weighted_risk))
 
         return {
             'decision': decision,
@@ -731,12 +622,14 @@ class ForexDataAPI(View):
             'confidence': round(confidence, 1),
             'technical_indicators': technical_indicators,
             'prediction': {
-                'trend': 'UP' if decision == 'BUY' else 'DOWN' if decision == 'SELL' else 'HOLD',
+                'trend': 'UP' if decision == 'BUY'
+                         else 'DOWN' if decision == 'SELL'
+                         else 'HOLD',
                 'confidence': round(confidence, 1)
             },
-            'sentiment': sentiment,
+            'sentiment': 'NEUTRAL',
             'risk': {
-                'volatility': 0.15,  # Realistic volatility
+                'volatility': 0.15,
                 'stop_loss': None,
                 'take_profit': None,
                 'risk_score': round(risk_score, 1)
@@ -843,6 +736,120 @@ class AgentLogsAPI(View):
         } for log in logs]
         return JsonResponse({'logs': data})
 
+@method_decorator(csrf_exempt, name='dispatch')
+class AgentStatusAPI(View):
+    """API for agent status - returns the status of all agents"""
+
+    def get(self, request):
+        """Get status of all agents"""
+        try:
+            # Get all agents status
+            status_list = AgentStatus.get_all_agents_status()
+            
+            # Check if any agents are active
+            active_count = sum(1 for agent in status_list if agent['is_active'])
+            total_count = len(status_list)
+            
+            # If no agents have been initialized, try to initialize them
+            if active_count == 0:
+                # Try to initialize agents and check their status
+                try:
+                    from .agents import (
+                        DataAgent, TechnicalAnalysisAgent, PredictionAgent,
+                        SentimentAgent, RiskManagementAgent, DecisionAgent
+                    )
+                    
+                    # Update status for each agent
+                    agents_to_check = [
+                        ('DataAgent', DataAgent()),
+                        ('TechnicalAnalysisAgent', TechnicalAnalysisAgent()),
+                        ('PredictionAgent', PredictionAgent()),
+                        ('SentimentAgent', SentimentAgent()),
+                        ('RiskManagementAgent', RiskManagementAgent()),
+                        ('DecisionAgent', DecisionAgent())
+                    ]
+                    
+                    for agent_name, agent in agents_to_check:
+                        try:
+                            AgentStatus.update_agent_status(
+                                agent_name=agent_name,
+                                is_active=True,
+                                status='ACTIVE',
+                                message='Agent initialized and ready'
+                            )
+                        except Exception as e:
+                            AgentStatus.update_agent_status(
+                                agent_name=agent_name,
+                                is_active=False,
+                                status='ERROR',
+                                message='Failed to initialize agent',
+                                last_error=str(e)
+                            )
+                    
+                    # Get updated status list
+                    status_list = AgentStatus.get_all_agents_status()
+                    active_count = sum(1 for agent in status_list if agent['is_active'])
+                    
+                except Exception as e:
+                    print(f"Error initializing agents: {e}")
+            
+            return JsonResponse({
+                'agents': status_list,
+                'summary': {
+                    'total': total_count,
+                    'active': active_count,
+                    'inactive': total_count - active_count,
+                    'all_active': active_count == total_count
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            print(f"Error in AgentStatusAPI.get: {e}")
+            traceback.print_exc()
+            return JsonResponse({'error': str(e)})
+
+    def post(self, request):
+        """Activate all agents"""
+        try:
+            from .agents import (
+                DataAgent, TechnicalAnalysisAgent, PredictionAgent,
+                SentimentAgent, RiskManagementAgent, DecisionAgent
+            )
+            
+            agents_to_activate = [
+                ('DataAgent', DataAgent()),
+                ('TechnicalAnalysisAgent', TechnicalAnalysisAgent()),
+                ('PredictionAgent', PredictionAgent()),
+                ('SentimentAgent', SentimentAgent()),
+                ('RiskManagementAgent', RiskManagementAgent()),
+                ('DecisionAgent', DecisionAgent())
+            ]
+            
+            activated = []
+            errors = []
+            
+            for agent_name, agent in agents_to_activate:
+                try:
+                    AgentStatus.update_agent_status(
+                        agent_name=agent_name,
+                        is_active=True,
+                        status='ACTIVE',
+                        message='Agent activated successfully'
+                    )
+                    activated.append(agent_name)
+                except Exception as e:
+                    errors.append(f"{agent_name}: {str(e)}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'activated': activated,
+                'errors': errors
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)})
+
 @login_required
 def agent_logs(request):
     """View agent logs"""
@@ -857,9 +864,15 @@ class HighRiskPairsAPI(View):
         try:
             high_risk_pairs = []
             all_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDINR', 'EURGBP', 'EURJPY', 'GBPJPY', 'AUDJPY', 'CADJPY', 'CHFJPY', 'EURCHF', 'GBPCHF', 'AUDCHF', 'EURNZD', 'GBPNZD', 'AUDNZD', 'USDMXN', 'USDZAR', 'USDTRY']
+            
+            total_pairs = len(all_pairs)
+            processed_pairs = 0
 
             for symbol in all_pairs:
                 try:
+                    # Update progress
+                    processed_pairs += 1
+                    
                     # Get historical data for risk calculation
                     now = timezone.now()
                     historical_data = ForexData.objects.filter(
@@ -867,8 +880,24 @@ class HighRiskPairsAPI(View):
                         timestamp__gte=now - timedelta(hours=24)
                     ).order_by('timestamp')[:100]
 
-                    # If no historical data, generate some mock data for analysis
-                    if not historical_data:
+                    # Try to get real data first, fallback to mock if needed
+                    real_historical_data = real_data_fetcher.get_forex_data(symbol, '1h', 50)
+                    if real_historical_data:
+                        # Convert real data to mock object format for compatibility
+                        historical_data = []
+                        for item in real_historical_data:
+                            mock_item = type('RealForexData', (), {
+                                'symbol': symbol,
+                                'timestamp': item['timestamp'],
+                                'close_price': item['close'],
+                                'open_price': item['open'],
+                                'high_price': item['high'],
+                                'low_price': item['low'],
+                                'volume': item['volume']
+                            })()
+                            historical_data.append(mock_item)
+                    elif not historical_data:
+                        # If no historical data, generate some mock data for analysis
                         historical_data = self._generate_mock_historical_data(symbol, 50, '1h')
 
                     # Calculate technical indicators
@@ -891,7 +920,14 @@ class HighRiskPairsAPI(View):
             # Sort by risk score descending
             high_risk_pairs.sort(key=lambda x: x['risk_score'], reverse=True)
 
-            return JsonResponse({'high_risk_pairs': high_risk_pairs})
+            return JsonResponse({
+                'high_risk_pairs': high_risk_pairs,
+                'progress': {
+                    'total': total_pairs,
+                    'processed': processed_pairs,
+                    'percentage': round((processed_pairs / total_pairs) * 100, 1) if total_pairs > 0 else 100
+                }
+            })
 
         except Exception as e:
             print(f"Error in HighRiskPairsAPI.get: {e}")
@@ -919,9 +955,14 @@ class HighRiskPairsAPI(View):
         if historical_data and len(historical_data) > 5:
             recent_prices = [float(d.close_price) for d in historical_data[-20:]]
             if len(recent_prices) > 1:
-                returns = [(recent_prices[i] - recent_prices[i-1]) / recent_prices[i-1]
-                          for i in range(1, len(recent_prices))]
-                volatility = statistics.stdev(returns) * 100 if len(returns) > 1 else 0
+                # Filter out zero prices to avoid division by zero
+                valid_prices = [p for p in recent_prices if p > 0]
+                if len(valid_prices) > 1:
+                    returns = [(valid_prices[i] - valid_prices[i-1]) / valid_prices[i-1]
+                              for i in range(1, len(valid_prices))]
+                    volatility = statistics.stdev(returns) * 100 if len(returns) > 1 else 0
+                else:
+                    volatility = 0
 
                 true_ranges = []
                 for i in range(1, len(recent_prices)):
@@ -930,7 +971,11 @@ class HighRiskPairsAPI(View):
                     tr = high - low
                     true_ranges.append(tr)
                 atr = sum(true_ranges) / len(true_ranges) if true_ranges else 0
-                atr_percentage = (atr / recent_prices[-1]) * 100
+                # Check for zero to avoid division by zero
+                if recent_prices[-1] > 0:
+                    atr_percentage = (atr / recent_prices[-1]) * 100
+                else:
+                    atr_percentage = 0
 
                 combined_volatility = (volatility + atr_percentage) / 2
                 risk_components['market_volatility'] = min(combined_volatility * 5, 25)
@@ -940,7 +985,11 @@ class HighRiskPairsAPI(View):
             current_price = float(historical_data[-1].close_price)
             sma_20 = technical_indicators['sma_20']
 
-            trend_deviation = abs(current_price - sma_20) / sma_20 * 100
+            # Check for zero to avoid division by zero
+            if sma_20 > 0:
+                trend_deviation = abs(current_price - sma_20) / sma_20 * 100
+            else:
+                trend_deviation = 0
 
             if len(historical_data) > 10:
                 recent_trend = sum(1 if float(h.close_price) > sma_20 else -1
@@ -1004,7 +1053,12 @@ class HighRiskPairsAPI(View):
             recent_prices = [float(d.close_price) for d in historical_data[-5:]]
 
             if len(recent_prices) >= 3:
-                recent_change = abs(recent_prices[-1] - recent_prices[-3]) / recent_prices[-3] * 100
+                # Check for zero to avoid division by zero
+                if recent_prices[-3] > 0:
+                    recent_change = abs(recent_prices[-1] - recent_prices[-3]) / recent_prices[-3] * 100
+                else:
+                    recent_change = 0
+                    
                 if recent_change > 2:
                     risk_components['price_action'] = 12
                 elif recent_change > 1:
@@ -1012,7 +1066,11 @@ class HighRiskPairsAPI(View):
 
             price_range = max(recent_prices) - min(recent_prices)
             avg_price = sum(recent_prices) / len(recent_prices)
-            range_percentage = (price_range / avg_price) * 100
+            # Check for zero to avoid division by zero
+            if avg_price > 0:
+                range_percentage = (price_range / avg_price) * 100
+            else:
+                range_percentage = 0
 
             if range_percentage < 0.2:
                 risk_components['price_action'] += 8
