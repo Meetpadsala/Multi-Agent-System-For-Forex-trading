@@ -8,7 +8,11 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    default-libmysqlclient-dev \
+    gcc \
+    pkg-config \
+    python3-dev \
+    libmariadb-dev \
+    libmariadb-dev-compat \
     libxml2-dev \
     libxslt1-dev \
     libjpeg-dev \
