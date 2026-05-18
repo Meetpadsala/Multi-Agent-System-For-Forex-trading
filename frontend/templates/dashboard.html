@@ -1,0 +1,1414 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Forex Trading System{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Specific Styles */
+    .dashboard-container {
+        padding: 0 0.5rem;
+    }
+    
+    /* Chart Section */
+    .chart-toolbar {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .chart-toolbar .form-select,
+    .chart-toolbar .form-control {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        font-size: 0.875rem;
+    }
+    
+    .chart-toolbar .form-select:focus,
+    .chart-toolbar .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+    }
+    
+    .toolbar-divider {
+        width: 1px;
+        height: 30px;
+        background: #dee2e6;
+        margin: 0 0.25rem;
+    }
+    
+    .mode-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .mode-toggle .form-check-input {
+        margin: 0;
+    }
+    
+    .mode-toggle .form-check-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    .indicator-check {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        background: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .indicator-check:hover {
+        background: #e9ecef;
+    }
+    
+    .indicator-check.active {
+        background: #e7f1ff;
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    
+    .price-display {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        color: white;
+    }
+    
+    .price-main {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .price-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    
+    .price-pair {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    
+    .price-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .price-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    /* Sidebar Widgets */
+    .widget-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    
+    .widget-card:last-child {
+        margin-bottom: 0;
+    }
+    
+    .widget-card .card-header {
+        background: white;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 0.875rem 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .widget-card .card-header i {
+        color: #0d6efd;
+    }
+    
+    .widget-card .card-body {
+        padding: 1rem;
+    }
+    
+    /* Decision Widget */
+    .decision-display {
+        text-align: center;
+        padding: 0.5rem;
+    }
+    
+    .decision-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+    }
+    
+    .decision-badge.buy {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+    }
+    
+    .decision-badge.sell {
+        background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+        color: white;
+    }
+    
+    .decision-badge.hold {
+        background: linear-gradient(135deg, #ffc107 0%, #ffcd39 100%);
+        color: #212529;
+    }
+    
+    .decision-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+    
+    .decision-stat {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .decision-stat-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+    
+    .decision-stat-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    /* Risk Meter Widget */
+    .risk-meter {
+        text-align: center;
+    }
+    
+    .risk-gauge {
+        position: relative;
+        width: 120px;
+        height: 60px;
+        margin: 0 auto 0.75rem;
+        overflow: hidden;
+    }
+    
+    .risk-gauge-bg {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: conic-gradient(
+            #28a745 0deg 120deg,
+            #ffc107 120deg 240deg,
+            #dc3545 240deg 360deg
+        );
+    }
+    
+    .risk-gauge-cover {
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        top: 15px;
+        left: 15px;
+        background: white;
+        border-radius: 50%;
+    }
+    
+    .risk-gauge-needle {
+        position: absolute;
+        width: 4px;
+        height: 50px;
+        background: #212529;
+        bottom: 0;
+        left: 50%;
+        transform-origin: bottom center;
+        transform: translateX(-50%) rotate(0deg);
+        border-radius: 2px;
+    }
+    
+    .risk-value-display {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .risk-level-text {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.25rem 1rem;
+        border-radius: 20px;
+    }
+    
+    /* Indicators Widget */
+    .indicators-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    
+    .indicator-item {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .indicator-item-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+    
+    .indicator-item-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    /* Prediction Widget */
+    .prediction-display {
+        text-align: center;
+    }
+    
+    .prediction-price {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #212529;
+    }
+    
+    .prediction-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.35rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+    }
+    
+    .prediction-trend.up {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .prediction-trend.down {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .prediction-confidence {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    /* High Risk Alert */
+    .alert-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .alert-card .card-header {
+        background: white;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .risk-pair-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: #fff5f5;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .risk-pair-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .risk-pair-symbol {
+        font-weight: 600;
+    }
+    
+    .risk-pair-score {
+        font-weight: 700;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+    
+    .risk-pair-score.high {
+        background: #dc3545;
+        color: white;
+    }
+    
+    /* Loading & Error States */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 991px) {
+        .sidebar-column {
+            order: -1;
+            margin-bottom: 1rem;
+        }
+        
+        .chart-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .toolbar-divider {
+            display: none;
+        }
+    }
+    
+    @media (max-width: 767px) {
+        .stats-value {
+            font-size: 1.25rem;
+        }
+        
+        .price-value {
+            font-size: 1.5rem;
+        }
+        
+        .decision-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Chart Section -->
+        <div class="col-lg-8 mb-4">
+            <div class="card widget-card h-100">
+                <div class="card-header">
+                    <span><i class="fas fa-chart-area me-2"></i>Live Forex Chart</span>
+                    <span class="text-muted small" id="lastUpdate">Last updated: --</span>
+                </div>
+                <div class="card-body" style="position: relative">
+                    <!-- Price Display Bar -->
+                    <div class="price-display mb-3">
+                        <div class="price-main">
+                            <span class="price-pair" id="selectedPair">EUR/USD</span>
+                            <span class="price-value" id="currentPriceDisplay">--</span>
+                        </div>
+                        <div class="price-badges">
+                            <span id="trendBadge" class="price-badge bg-white bg-opacity-25">Trend: --</span>
+                            <span id="signalBadge" class="price-badge bg-white bg-opacity-25">Signal: --</span>
+                            <span id="modeBadge" class="price-badge bg-success">LIVE</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Toolbar -->
+                    <div class="chart-toolbar">
+                        <div class="row g-2 w-100">
+                            <div class="col-md-2 col-sm-6">
+                                <select id="symbolSelect" class="form-select form-select-sm">
+                                    <optgroup label="Major Pairs">
+                                        {% for pair in major_pairs %}
+                                        <option value="{{ pair.symbol }}" {% if pair.symbol == "EURUSD" %}selected{% endif %}>
+                                            {{ pair.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Minor Pairs">
+                                        {% for pair in minor_pairs %}
+                                        <option value="{{ pair.symbol }}">{{ pair.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    <optgroup label="Exotic Pairs">
+                                        {% for pair in exotic_pairs %}
+                                        <option value="{{ pair.symbol }}">{{ pair.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-sm-6">
+                                <select id="timeframeSelect" class="form-select form-select-sm">
+                                    <option value="1m">1 Min</option>
+                                    <option value="5m">5 Min</option>
+                                    <option value="15m">15 Min</option>
+                                    <option value="1h" selected>1 Hour</option>
+                                    <option value="1d">1 Day</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3 col-sm-6">
+                                <div class="mode-toggle">
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="radio" name="mode" id="liveMode" checked />
+                                        <label class="form-check-label text-success" for="liveMode">Live</label>
+                                    </div>
+                                    <div class="form-check form-check-inline m-0">
+                                        <input class="form-check-input" type="radio" name="mode" id="historyMode" />
+                                        <label class="form-check-label text-primary" for="historyMode">History</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-5 col-sm-6" id="dateRangeContainer" style="display: none;">
+                                <div class="d-flex gap-2 w-100">
+                                    <input type="date" id="startDate" class="form-control form-control-sm" placeholder="Start" style="width: 48%;">
+                                    <input type="date" id="endDate" class="form-control form-control-sm" placeholder="End" style="width: 48%;">
+                                </div>
+                            </div>
+                            
+                            <!-- <div class="col-md-2 col-sm-6">
+                                <button id="applyFilterBtn" class="btn btn-sm btn-primary w-100" disabled>
+                                    <i class="fas fa-filter me-1"></i>Apply
+                                </button>
+                            </div> -->
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <span class="text-muted small">Chart:</span>
+                            <label class="indicator-check active" id="lineChartCheck">
+                                <input class="form-check-input d-none" type="radio" name="chartType" id="lineChart" checked />
+                                <i class="fas fa-chart-line me-1"></i>Line
+                            </label>
+                            <label class="indicator-check" id="candleChartCheck">
+                                <input class="form-check-input d-none" type="radio" name="chartType" id="candlestickChart" />
+                                <i class="fas fa-chart-bar me-1"></i>Candle
+                            </label>
+                            
+                            <div class="toolbar-divider"></div>
+                            
+                            <span class="text-muted small">Indicators:</span>
+                            <label class="indicator-check active" id="maCheck">
+                                <input class="form-check-input d-none" type="checkbox" id="maCheckbox" checked />
+                                MA
+                            </label>
+                            <label class="indicator-check" id="rsiCheck">
+                                <input class="form-check-input d-none" type="checkbox" id="rsiCheckbox" />
+                                RSI
+                            </label>
+                            <label class="indicator-check" id="macdCheck">
+                                <input class="form-check-input d-none" type="checkbox" id="macdCheckbox" />
+                                MACD
+                            </label>
+                            <label class="indicator-check" id="bbCheck">
+                                <input class="form-check-input d-none" type="checkbox" id="bbCheckbox" />
+                                BB
+                            </label>
+                        </div>
+                         <div class="col-md-2 col-sm-6">
+                                <button id="applyFilterBtn" class="btn btn-sm btn-primary w-100" disabled>
+                                    <i class="fas fa-filter me-1"></i>Apply
+                                </button>
+                            </div>
+                    </div>
+                    
+                    <!-- Loading Overlay -->
+                    <div id="loadingSpinner" class="loading-overlay" style="display: none;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <div class="small text-muted">Loading data...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                    
+                    <!-- No Data Message -->
+                    <div id="noDataMessage" class="alert alert-warning" style="display: none;">
+                        No data found for selected range. Please try a different date range.
+                    </div>
+                    
+                    <!-- Chart Container -->
+                    <div id="chartContainer" style="position: relative; height: 400px;">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Widgets -->
+        <div class="col-lg-4 sidebar-column">
+            <!-- Agent Decision Widget -->
+            <div class="widget-card">
+                <div class="card-header">
+                    <span><i class="fas fa-brain me-2"></i>Agent Decision</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="decisionDisplay" class="decision-display">
+                        <p class="text-muted">Select a currency pair</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Analysis Widget -->
+            <div class="widget-card">
+                <div class="card-header">
+                    <span><i class="fas fa-shield-alt me-2"></i>Risk Analysis</span>
+                </div>
+                <div class="card-body">
+                    <div id="riskMeter" class="risk-meter">
+                        <div class="risk-value-display" id="riskValue">--</div>
+                        <div class="risk-level-text bg-secondary text-white" id="riskLevelText">Unknown</div>
+                        <div class="progress mt-3" style="height: 8px;">
+                            <div id="riskBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted mt-2 d-block" id="riskText">Risk Level: N/A</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Technical Indicators Widget -->
+            <div class="widget-card">
+                <div class="card-header">
+                    <span><i class="fas fa-indicators me-2"></i>Technical Indicators</span>
+                </div>
+                <div class="card-body">
+                    <div id="indicatorsDisplay" class="indicators-grid">
+                        <div class="indicator-item">
+                            <div class="indicator-item-label">RSI</div>
+                            <div class="indicator-item-value" id="rsiValue">--</div>
+                        </div>
+                        <div class="indicator-item">
+                            <div class="indicator-item-label">MACD</div>
+                            <div class="indicator-item-value" id="macdValue">--</div>
+                        </div>
+                        <div class="indicator-item">
+                            <div class="indicator-item-label">SMA 20</div>
+                            <div class="indicator-item-value" id="sma20Value">--</div>
+                        </div>
+                        <div class="indicator-item">
+                            <div class="indicator-item-label">EMA</div>
+                            <div class="indicator-item-value" id="emaValue">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prediction Widget -->
+            <div class="widget-card">
+                <div class="card-header">
+                    <span><i class="fas fa-crystal-ball me-2"></i>Prediction</span>
+                </div>
+                <div class="card-body">
+                    <div id="predictionDisplay" class="prediction-display">
+                        <p class="text-muted">Loading prediction...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- High Risk Pairs Alert -->
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="alert-card card">
+                <div class="card-header">
+                    <span><i class="fas fa-exclamation-triangle text-danger me-2"></i>High Risk Pairs Alert</span>
+                    <button id="refreshHighRiskBtn" class="btn btn-sm btn-warning">
+                        <i class="fas fa-search me-1"></i>Scan Now
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="highRiskDisplay" class="row">
+                        <div class="col-12 text-center py-3">
+                            <p class="text-muted mb-0">
+                                Click "Scan Now" to check for pairs with risk scores above 70
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+    let priceChart;
+    let ohlcData = [];
+    let allDataPoints = [];
+    let currentSymbol = "EURUSD";
+    let currentTimeframe = "1h";
+    let currentMode = "live";
+    let currentChartType = "line";
+    let autoUpdateInterval;
+    const maxDataPoints = 200;
+
+    const pairNames = {
+        'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'USDJPY': 'USD/JPY', 'USDCHF': 'USD/CHF',
+        'AUDUSD': 'AUD/USD', 'USDCAD': 'USD/CAD', 'NZDUSD': 'NZD/USD'
+    };
+
+document.addEventListener("DOMContentLoaded", function () {
+        initializeChart();
+        setupEventListeners();
+        loadData();
+        startAutoUpdate();
+    });
+
+    function setupEventListeners() {
+        document.getElementById("symbolSelect").addEventListener("change", function () {
+            currentSymbol = this.value;
+            document.getElementById("selectedPair").textContent = pairNames[currentSymbol] || currentSymbol;
+            loadData();
+        });
+
+        document.getElementById("timeframeSelect").addEventListener("change", function () {
+            currentTimeframe = this.value;
+            loadData();
+        });
+
+        document.getElementById("liveMode").addEventListener("change", function () {
+            if (this.checked) {
+                currentMode = "live";
+                document.getElementById("dateRangeContainer").style.display = "none";
+                document.getElementById("applyFilterBtn").disabled = true;
+                document.getElementById("modeBadge").textContent = "LIVE";
+                document.getElementById("modeBadge").className = "price-badge bg-success";
+                startAutoUpdate();
+                loadData();
+            }
+        });
+
+        document.getElementById("historyMode").addEventListener("change", function () {
+            if (this.checked) {
+                currentMode = "history";
+                document.getElementById("dateRangeContainer").style.display = "block";
+                document.getElementById("applyFilterBtn").disabled = false;
+                document.getElementById("modeBadge").textContent = "HISTORY";
+                document.getElementById("modeBadge").className = "price-badge bg-primary";
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                document.getElementById("startDate").value = startDate.toISOString().split("T")[0];
+                document.getElementById("endDate").value = endDate.toISOString().split("T")[0];
+                stopAutoUpdate();
+            }
+        });
+
+        document.getElementById("lineChartCheck").addEventListener("click", function() {
+            currentChartType = "line";
+            document.getElementById("lineChartCheck").classList.add("active");
+            document.getElementById("candleChartCheck").classList.remove("active");
+            updateChartType();
+        });
+        
+        document.getElementById("candleChartCheck").addEventListener("click", function() {
+            currentChartType = "candlestick";
+            document.getElementById("candleChartCheck").classList.add("active");
+            document.getElementById("lineChartCheck").classList.remove("active");
+            updateChartType();
+        });
+
+        ["ma", "rsi", "macd", "bb"].forEach(indicator => {
+            const checkId = indicator + "Check";
+            const checkboxId = indicator + "Checkbox";
+            document.getElementById(checkId).addEventListener("click", function() {
+                const checkbox = document.getElementById(checkboxId);
+                checkbox.checked = !checkbox.checked;
+                this.classList.toggle("active", checkbox.checked);
+                updateIndicators();
+            });
+            document.getElementById(checkboxId).addEventListener("change", function() {
+                document.getElementById(checkId).classList.toggle("active", this.checked);
+                updateIndicators();
+            });
+        });
+
+        document.getElementById("applyFilterBtn").addEventListener("click", function() {
+            if (currentMode === "history") {
+                const startDate = document.getElementById("startDate").value;
+                const endDate = document.getElementById("endDate").value;
+                if (!startDate || !endDate) {
+                    showError("Please select both start and end dates.");
+                    return;
+                }
+                if (new Date(startDate) > new Date(endDate)) {
+                    showError("Start date must be before end date.");
+                    return;
+                }
+                loadData();
+            }
+        });
+
+        document.getElementById("refreshHighRiskBtn").addEventListener("click", loadHighRiskPairs);
+    }
+
+    function showLoading() {
+        document.getElementById("loadingSpinner").style.display = "flex";
+    }
+
+    function hideLoading() {
+        document.getElementById("loadingSpinner").style.display = "none";
+    }
+
+    function showNoDataMessage() {
+        document.getElementById("noDataMessage").style.display = "block";
+    }
+
+    function hideNoDataMessage() {
+        document.getElementById("noDataMessage").style.display = "none";
+    }
+
+    function showError(message) {
+        const errorElement = document.getElementById("errorMessage");
+        errorElement.textContent = message;
+        errorElement.style.display = "block";
+    }
+
+    function hideError() {
+        document.getElementById("errorMessage").style.display = "none";
+    }
+
+    function initializeChart() {
+        const ctx = document.getElementById("priceChart").getContext("2d");
+        priceChart = new Chart(ctx, {
+            type: "line",
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                if (typeof value === "number" && !isNaN(value)) {
+                                    return `Price: ${value.toFixed(5)}`;
+                                }
+                                return `Price: N/A`;
+                            }
+                        }
+                    },
+                    zoom: {
+                        pan: { enabled: true, mode: "x" },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: "time",
+                        time: { displayFormats: { minute: "HH:mm", hour: "HH:mm", day: "MMM dd" } },
+                        ticks: { maxTicksLimit: 10 }
+                    },
+                    y: {
+                        position: "right",
+                        ticks: {
+                            callback: function(value) {
+                                if (typeof value !== "number" || isNaN(value) || value === 0) return "N/A";
+                                if (Math.abs(value) >= 100) return value.toFixed(2);
+                                else if (Math.abs(value) >= 1) return value.toFixed(4);
+                                else return value.toFixed(5);
+                            }
+                        },
+                        grid: { color: "rgba(200, 200, 200, 0.3)" }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartType() {
+        const validData = ohlcData.filter(d => {
+            const close = parseFloat(d.close);
+            const timestamp = new Date(d.timestamp);
+            return !isNaN(close) && close > 0 && !isNaN(timestamp.getTime());
+        });
+
+        if (validData.length === 0) {
+            priceChart.data.datasets = [];
+            priceChart.update();
+            return;
+        }
+
+        priceChart.data.datasets = [{
+            label: "Price",
+            data: validData.map(d => ({ x: new Date(d.timestamp), y: parseFloat(d.close) })),
+            borderColor: "rgb(75, 192, 192)",
+            backgroundColor: currentChartType === "line" ? "rgba(75, 192, 192, 0.1)" : "rgba(75, 192, 192, 0.5)",
+            borderWidth: 2,
+            fill: currentChartType === "line",
+            pointRadius: 0,
+            tension: 0.1
+        }];
+
+        updateIndicators();
+        priceChart.update("active");
+    }
+
+    function updateIndicators() {
+        priceChart.data.datasets = priceChart.data.datasets.filter(ds => 
+            !ds.label.includes("MA") && !ds.label.includes("RSI") && 
+            !ds.label.includes("MACD") && !ds.label.includes("BB")
+        );
+
+        if (ohlcData.length === 0) return;
+
+        const closes = ohlcData.map(d => d.close);
+
+        if (document.getElementById("maCheckbox").checked) {
+            const ma20 = calculateSMA(closes, 20);
+            priceChart.data.datasets.push({
+                label: "MA(20)",
+                data: ma20.map((val, i) => ({ x: new Date(ohlcData[i + 19]?.timestamp), y: val })),
+                borderColor: "rgb(255, 165, 0)",
+                borderWidth: 1.5,
+                fill: false,
+                pointRadius: 0
+            });
+        }
+
+        if (document.getElementById("rsiCheckbox").checked) {
+            const rsi = calculateRSI(closes, 14);
+            priceChart.data.datasets.push({
+                label: "RSI",
+                data: rsi.map((val, i) => ({ x: new Date(ohlcData[i + 14]?.timestamp), y: val })),
+                borderColor: "rgb(255, 0, 255)",
+                borderWidth: 1.5,
+                fill: false,
+                pointRadius: 0
+            });
+        }
+
+        if (document.getElementById("macdCheckbox").checked) {
+            const macd = calculateMACD(closes);
+            priceChart.data.datasets.push({
+                label: "MACD",
+                data: macd.map((val, i) => ({ x: new Date(ohlcData[i + 25]?.timestamp), y: val })),
+                borderColor: "rgb(0, 255, 255)",
+                borderWidth: 1.5,
+                fill: false,
+                pointRadius: 0
+            });
+        }
+
+        if (document.getElementById("bbCheckbox").checked) {
+            const bb = calculateBollingerBands(closes, 20, 2);
+            priceChart.data.datasets.push({
+                label: "BB Upper",
+                data: bb.upper.map((val, i) => ({ x: new Date(ohlcData[i + 19]?.timestamp), y: val })),
+                borderColor: "rgba(255, 0, 0, 0.5)",
+                borderWidth: 1,
+                fill: false,
+                pointRadius: 0
+            });
+            priceChart.data.datasets.push({
+                label: "BB Lower",
+                data: bb.lower.map((val, i) => ({ x: new Date(ohlcData[i + 19]?.timestamp), y: val })),
+                borderColor: "rgba(255, 0, 0, 0.5)",
+                borderWidth: 1,
+                fill: false,
+                pointRadius: 0
+            });
+        }
+
+        priceChart.update();
+    }
+
+  function calculateSMA(data, period) {
+    const result = [];
+    for (let i = period - 1; i < data.length; i++) {
+      const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+      result.push(sum / period);
+    }
+    return result;
+  }
+
+  function calculateRSI(data, period) {
+    const gains = [];
+    const losses = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const change = data[i] - data[i - 1];
+      gains.push(change > 0 ? change : 0);
+      losses.push(change < 0 ? -change : 0);
+    }
+
+    const avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    const avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period;
+
+    const result = [];
+    let currentAvgGain = avgGain;
+    let currentAvgLoss = avgLoss;
+
+    for (let i = period; i < gains.length; i++) {
+      currentAvgGain = (currentAvgGain * (period - 1) + gains[i]) / period;
+      currentAvgLoss = (currentAvgLoss * (period - 1) + losses[i]) / period;
+
+      const rs = currentAvgGain / currentAvgLoss;
+      result.push(100 - 100 / (1 + rs));
+    }
+
+    return result;
+  }
+
+  function calculateMACD(data) {
+    const ema12 = calculateEMA(data, 12);
+    const ema26 = calculateEMA(data, 26);
+    const macd = [];
+
+    for (let i = 0; i < Math.min(ema12.length, ema26.length); i++) {
+      macd.push(ema12[i + 14] - ema26[i]);
+    }
+
+    return macd;
+  }
+
+  function calculateEMA(data, period) {
+    const multiplier = 2 / (period + 1);
+    const result = [data[0]];
+
+    for (let i = 1; i < data.length; i++) {
+      result.push((data[i] - result[i - 1]) * multiplier + result[i - 1]);
+    }
+
+    return result;
+  }
+
+  function calculateBollingerBands(data, period, stdDev) {
+    const sma = calculateSMA(data, period);
+    const upper = [];
+    const lower = [];
+
+    for (let i = 0; i < sma.length; i++) {
+      const slice = data.slice(i, i + period);
+      const mean = sma[i];
+      const variance =
+        slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period;
+      const sd = Math.sqrt(variance);
+
+      upper.push(mean + stdDev * sd);
+      lower.push(mean - stdDev * sd);
+    }
+
+    return { upper, lower };
+  }
+
+  async function loadData() {
+    const symbol = currentSymbol;
+    const timeframe = currentTimeframe;
+
+    let url;
+    let useHistoryAPI = false;
+
+    // Add date parameters for history mode
+    if (currentMode === "history") {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      if (startDate && endDate) {
+        // Use the new HistoryDataAPI for history mode with date range
+        url = `/api/history-data/?pair=${symbol}&interval=${timeframe}&start=${startDate}&end=${endDate}`;
+        useHistoryAPI = true;
+      } else {
+        url = `/api/forex/${symbol}/?timeframe=${timeframe}&limit=${maxDataPoints}`;
+      }
+    } else {
+      url = `/api/forex/${symbol}/?timeframe=${timeframe}&limit=${maxDataPoints}`;
+    }
+
+    try {
+      showLoading();
+      hideError();
+      hideNoDataMessage();
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.error) {
+        hideLoading();
+        showError(data.error);
+        return;
+      }
+
+      let newData = [];
+
+      if (useHistoryAPI && data.historical_ohlc) {
+        // Format data from HistoryDataAPI for chart
+        newData = data.historical_ohlc;
+
+        // Update OHLC data for history mode
+        allDataPoints = newData;
+        ohlcData = newData;
+
+        hideLoading();
+
+        // Show "No data" message if empty
+        if (newData.length === 0) {
+          showNoDataMessage();
+          return;
+        }
+
+        // Update chart with new data
+        updateChartType();
+
+        // Update price info with data from response
+        if (data.current_price) {
+          const priceEl = document.getElementById("currentPriceDisplay");
+          if (priceEl) priceEl.textContent = data.current_price.toFixed(5);
+        }
+
+        // Update decision and indicators
+        if (data.decision) {
+          updateDecision(data.decision);
+          if (data.decision.technical_indicators) {
+            updateIndicatorsDisplay(data.decision.technical_indicators);
+          }
+        }
+
+        // Update prediction
+        if (data.prediction) {
+          updatePrediction(data.prediction);
+        }
+
+        return;
+      }
+
+      // Original handling for live mode or when HistoryDataAPI returns error
+      newData = data.historical_ohlc || [];
+
+      if (currentMode === "live") {
+        // For live mode, update with new data points
+        updateRealTimeData(newData);
+      } else {
+        // For history mode, replace all data
+        allDataPoints = newData;
+        ohlcData = newData;
+      }
+
+      hideLoading();
+
+      // Show "No data" message if empty
+      if (newData.length === 0 && currentMode === "history") {
+        showNoDataMessage();
+        return;
+      }
+
+      // Update price info
+      updatePriceInfo(data);
+
+      // Update chart
+      updateChartType();
+
+      // Update decision
+      updateDecision(data.decision);
+
+      // Update risk meter
+      if (data.decision && data.decision.risk) {
+        updateRiskMeter(data.decision.risk.risk_score);
+      }
+
+      // Update indicators display
+      if (data.decision && data.decision.technical_indicators) {
+        updateIndicatorsDisplay(data.decision.technical_indicators);
+      }
+
+      // Update prediction
+      if (data.prediction) {
+        updatePrediction(data.prediction);
+      }
+    } catch (error) {
+      hideLoading();
+      console.error("Error loading data:", error);
+      showError("Error loading data: " + error.message);
+    }
+  }
+
+  function updateRealTimeData(newData) {
+    if (!newData || newData.length === 0) return;
+
+    // If this is the first load, initialize allDataPoints
+    if (allDataPoints.length === 0) {
+      allDataPoints = newData;
+      ohlcData = newData;
+      return;
+    }
+
+    // Find the latest timestamp in our current data
+    const latestTimestamp =
+      allDataPoints.length > 0
+        ? new Date(
+            Math.max(
+              ...allDataPoints.map((d) => new Date(d.timestamp).getTime()),
+            ),
+          )
+        : new Date(0);
+
+    // Filter new data points that are newer than our latest
+    const newDataPoints = newData.filter((d) => {
+      const dataTimestamp = new Date(d.timestamp);
+      return dataTimestamp > latestTimestamp;
+    });
+
+    // Add new data points to our collection
+    if (newDataPoints.length > 0) {
+      allDataPoints = [...allDataPoints, ...newDataPoints];
+
+      // Keep only the most recent maxDataPoints
+      if (allDataPoints.length > maxDataPoints) {
+        allDataPoints = allDataPoints.slice(-maxDataPoints);
+      }
+
+      ohlcData = allDataPoints;
+      console.log(
+        `Added ${newDataPoints.length} new data points. Total: ${allDataPoints.length}`,
+      );
+    } else {
+      // No new data, but update ohlcData to ensure consistency
+      ohlcData = allDataPoints;
+    }
+  }
+
+  function updatePriceInfo(data) {
+    const currentPrice = data.current_price
+      ? data.current_price.toFixed(5)
+      : "--";
+    const trend = data.prediction ? data.prediction.trend : "--";
+    const signal = data.decision ? data.decision.decision : "--";
+
+    const priceDisplay = document.getElementById("currentPriceDisplay");
+    if (priceDisplay) priceDisplay.textContent = currentPrice;
+    
+    const trendBadge = document.getElementById("trendBadge");
+    if (trendBadge) {
+      trendBadge.textContent = `Trend: ${trend}`;
+      trendBadge.className = `price-badge bg-${trend === "UP" ? "success" : trend === "DOWN" ? "danger" : "secondary"}`;
+    }
+    
+    const signalBadge = document.getElementById("signalBadge");
+    if (signalBadge) {
+      signalBadge.textContent = `Signal: ${signal}`;
+      signalBadge.className = `price-badge bg-${signal === "BUY" ? "success" : signal === "SELL" ? "danger" : "warning"}`;
+    }
+  }
+
+  function updateDecision(decision) {
+    const display = document.getElementById("decisionDisplay");
+    if (!display) return;
+    if (!decision) {
+      display.innerHTML = '<p class="text-muted">No decision available</p>';
+      return;
+    }
+
+    const type = decision.decision.toLowerCase();
+
+    const profitProb = decision.profit_probability
+      ? decision.profit_probability.toFixed(1)
+      : "N/A";
+    const confidence = decision.confidence
+      ? decision.confidence.toFixed(1)
+      : "N/A";
+
+    display.innerHTML = `
+        <div class="decision-badge ${type}">
+            ${decision.decision}
+        </div>
+        <div class="decision-stats">
+            <div class="decision-stat">
+                <div class="decision-stat-label">Probability</div>
+                <div class="decision-stat-value">${profitProb}%</div>
+            </div>
+            <div class="decision-stat">
+                <div class="decision-stat-label">Confidence</div>
+                <div class="decision-stat-value">${confidence}%</div>
+            </div>
+        </div>
+    `;
+  }
+
+function updateRiskMeter(riskScore) {
+    const riskBar = document.getElementById("riskBar");
+    const riskText = document.getElementById("riskText");
+    const riskValue = document.getElementById("riskValue");
+    const riskLevelText = document.getElementById("riskLevelText");
+
+    if (!riskBar || !riskText) return;
+
+    const score = riskScore || 0;
+    riskBar.style.width = `${score}%`;
+
+    let riskClass = "bg-success";
+    let riskLevel = "Low";
+
+    if (score > 70) {
+      riskClass = "bg-danger";
+      riskLevel = "High";
+    } else if (score > 40) {
+      riskClass = "bg-warning";
+      riskLevel = "Medium";
+    }
+
+    riskBar.className = `progress-bar ${riskClass}`;
+    riskText.textContent = `Risk Level: ${riskLevel} (${score.toFixed(1)}%)`;
+    
+    // Update additional risk display elements
+    if (riskValue) {
+      riskValue.textContent = score.toFixed(1) + "%";
+    }
+    if (riskLevelText) {
+      riskLevelText.textContent = riskLevel;
+      riskLevelText.className = `risk-level-text bg-${riskClass === "bg-success" ? "secondary" : riskClass === "bg-warning" ? "warning" : "danger"} text-white`;
+    }
+  }
+
+  function updateIndicatorsDisplay(indicators) {
+    const display = document.getElementById("indicatorsDisplay");
+    const rsi = indicators.rsi ? indicators.rsi.toFixed(2) : "N/A";
+    const macd = indicators.macd ? indicators.macd.toFixed(5) : "N/A";
+    const sma20 = indicators.sma_20 ? indicators.sma_20.toFixed(5) : "N/A";
+
+    display.innerHTML = `
+        <p><strong>RSI:</strong> ${rsi}</p>
+        <p><strong>MACD:</strong> ${macd}</p>
+        <p><strong>SMA 20:</strong> ${sma20}</p>
+    `;
+  }
+
+  function updatePrediction(prediction) {
+    const display = document.getElementById("predictionDisplay");
+    const price = prediction.price ? prediction.price.toFixed(5) : "N/A";
+    const trend = prediction.trend || "N/A";
+    const confidence = prediction.confidence
+      ? prediction.confidence.toFixed(1)
+      : "N/A";
+
+    const trendClass = trend === "UP" ? "up" : (trend === "DOWN" ? "down" : "secondary");
+    const trendIcon = trend === "UP" ? "fa-arrow-up" : (trend === "DOWN" ? "fa-arrow-down" : "fa-minus");
+
+    display.innerHTML = `
+        <div class="prediction-price">${price}</div>
+        <div class="prediction-trend ${trendClass}">
+            <i class="fas ${trendIcon}"></i> ${trend}
+        </div>
+        <div class="prediction-confidence">Confidence: ${confidence}%</div>
+    `;
+  }
+
+function startAutoUpdate() {
+    if (autoUpdateInterval) {
+      clearInterval(autoUpdateInterval);
+    }
+    if (currentMode === "live") {
+      autoUpdateInterval = setInterval(loadData, 15000);
+    }
+  }
+
+  function stopAutoUpdate() {
+    if (autoUpdateInterval) {
+      clearInterval(autoUpdateInterval);
+      autoUpdateInterval = null;
+    }
+  }
+
+  function zoomIn() {
+    priceChart.zoom(1.2);
+  }
+
+  function zoomOut() {
+    priceChart.zoom(0.8);
+  }
+
+  function resetZoom() {
+    priceChart.resetZoom();
+  }
+
+  async function loadHighRiskPairs() {
+    const button = document.getElementById("refreshHighRiskBtn");
+    const originalText = button.textContent;
+    button.textContent = "Scanning...";
+    button.disabled = true;
+
+    try {
+      const response = await fetch("/api/high-risk-pairs/");
+      const data = await response.json();
+
+      const display = document.getElementById("highRiskDisplay");
+
+      if (data.high_risk_pairs && data.high_risk_pairs.length > 0) {
+        let html =
+          '<div class="alert alert-danger"><h6>⚠️ High Risk Pairs Detected:</h6><ul class="mb-0">';
+
+        data.high_risk_pairs.forEach((pair) => {
+          html += `<li><strong>${pair.symbol}</strong> - Risk Score: ${pair.risk_score}% (${pair.risk_level})</li>`;
+        });
+
+        html += "</ul></div>";
+        html +=
+          '<p class="text-muted mt-2">These pairs show extreme volatility or technical conditions that may lead to significant price movements. Exercise caution when trading these pairs.</p>';
+
+        display.innerHTML = html;
+      } else {
+        display.innerHTML =
+          '<div class="alert alert-success">✅ No high-risk pairs detected at this time. All pairs show normal risk levels.</div>';
+      }
+    } catch (error) {
+      console.error("Error loading high risk pairs:", error);
+      document.getElementById("highRiskDisplay").innerHTML =
+        '<div class="alert alert-danger">Error loading high risk pairs data.</div>';
+    } finally {
+      button.textContent = originalText;
+      button.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

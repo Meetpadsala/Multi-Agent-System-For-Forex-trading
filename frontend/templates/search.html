@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Currency Pairs - Forex Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Search Currency Pairs</h5>
+                <form method="get" class="d-inline">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Search pairs (e.g., USD, EUR)" value="{{ query }}">
+                        <button class="btn btn-outline-secondary" type="submit">Search</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for pair in pairs %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ pair }}</h5>
+                                <a href="{% url 'dashboard' %}?symbol={{ pair }}" class="btn btn-primary">View Analysis</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if not pairs %}
+                <p class="text-muted">No currency pairs found matching your search.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

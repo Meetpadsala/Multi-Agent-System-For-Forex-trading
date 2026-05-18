@@ -1,0 +1,237 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Agent Management - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-robot"></i> Agent Management</h2>
+        <a href="{% url 'admin_create_agent' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New Agent
+        </a>
+    </div>
+
+    <!-- Create/Edit/Delete Form (conditional) -->
+    {% if form %}
+    <div class="card mb-4">
+        <div class="card-header bg-{% if mode == 'create' %}success{% elif mode == 'update' %}warning{% else %}danger{% endif %} text-white">
+            <h5 class="mb-0">
+                {% if mode == 'create' %}<i class="fas fa-plus"></i> Create Agent
+                {% elif mode == 'update' %}<i class="fas fa-edit"></i> Edit Agent
+                {% else %}<i class="fas fa-trash"></i> Delete Agent{% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    {% if mode != 'delete' %}
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.agent_name.label_tag }}
+                            {{ form.agent_name }}
+                            {% if form.agent_name.errors %}{{ form.agent_name.errors }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.is_active.label_tag }}
+                            {{ form.is_active }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.status.label_tag }}
+                            {{ form.status }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.message.label_tag }}
+                            {{ form.message }}
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            {{ form.last_error.label_tag }}
+                            {{ form.last_error }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-md-12">
+                        <p class="alert alert-warning">
+                            <strong>Confirm Delete:</strong> Are you sure you want to delete <strong>"{{ agent.agent_name }}"</strong>?
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-{% if mode == 'delete' %}danger{% else %}primary{% endif %}">
+                        {% if mode == 'create' %}Create Agent
+                        {% elif mode == 'update' %}Update Agent
+                        {% else %}Delete Agent{% endif %}
+                    </button>
+                    <a href="{% url 'admin_agents' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Agents Table -->
+    <div class="card table-admin">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Trading Agents ({{ agent_status_list.count }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Agent Name</th>
+                            <th>Status</th>
+                            <th>Active</th>
+                            <th>Last Run</th>
+                            <th>Message</th>
+                            <th>Last Error</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for agent in agent_status_list %}
+                        <tr>
+                            <td><strong>{{ agent.agent_name }}</strong></td>
+                            <td>
+                                <span class="badge bg-{% if agent.status == 'ACTIVE' %}success{% elif agent.status == 'RUNNING' %}info{% elif agent.status == 'ERROR' %}danger{% else %}secondary{% endif %}">
+                                    {{ agent.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if agent.is_active %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ agent.last_run|date:"M d, Y H:i"|default:"Never" }}</td>
+                            <td>{{ agent.message|default:"-"|truncatechars:30 }}</td>
+                            <td>
+                                {% if agent.last_error %}
+                                <span class="text-danger" title="{{ agent.last_error }}">{{ agent.last_error|truncatechars:30 }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ agent.updated_at|date:"M d, Y H:i"|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'admin_update_agent' agent.pk %}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'admin_toggle_agent' agent.agent_name %}" class="btn btn-outline-{% if agent.is_active %}danger{% else %}success{% endif %}" title="{% if agent.is_active %}Stop{% else %}Start{% endif %}">
+                                        <i class="fas fa-{% if agent.is_active %}stop{% else %}play{% endif %}"></i>
+                                    </a>
+                                    <a href="{% url 'admin_delete_agent' agent.pk %}" class="btn btn-outline-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No agents configured yet.</p>
+                                <a href="{% url 'admin_create_agent' %}" class="btn btn-primary">Create First Agent</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Agent Descriptions -->
+    <div class="mt-5">
+        <h5>Agent Role Descriptions</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card h-100 border-primary">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-database text-primary"></i> DataAgent</h6>
+                        <p class="card-text text-muted small">Fetches real-time and historical forex data from external APIs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-info">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-chart-line text-info"></i> TechnicalAnalysisAgent</h6>
+                        <p class="card-text text-muted small">Performs technical analysis (RSI, MACD, Bollinger Bands, etc.).</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-warning">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-brain text-warning"></i> PredictionAgent</h6>
+                        <p class="card-text text-muted small">Generates price predictions using ML models.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-success">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-smile text-success"></i> SentimentAgent</h6>
+                        <p class="card-text text-muted small">Analyzes market sentiment from news/social media.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-danger">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-shield-alt text-danger"></i> RiskManagementAgent</h6>
+                        <p class="card-text text-muted small">Calculates risk metrics & position sizing.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-balance-scale text-secondary"></i> DecisionAgent</h6>
+                        <p class="card-text text-muted small">Final trading decision maker aggregating all agents.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}
+

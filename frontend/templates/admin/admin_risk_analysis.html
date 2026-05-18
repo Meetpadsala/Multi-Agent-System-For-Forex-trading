@@ -1,0 +1,120 @@
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}Risk Analysis - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="fas fa-shield-alt"></i> Risk Analysis Management</h2>
+    
+    <!-- Filter Form -->
+    <div class="card table-admin mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Symbol</label>
+                    <input type="text" name="symbol" class="form-control" value="{{ symbol_filter }}" placeholder="e.g., EURUSD">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Risk Level</label>
+                    <select name="risk_level" class="form-select">
+                        <option value="">All</option>
+                        <option value="LOW" {% if risk_level_filter == 'LOW' %}selected{% endif %}>LOW</option>
+                        <option value="MEDIUM" {% if risk_level_filter == 'MEDIUM' %}selected{% endif %}>MEDIUM</option>
+                        <option value="HIGH" {% if risk_level_filter == 'HIGH' %}selected{% endif %}>HIGH</option>
+                        <option value="EXTREME" {% if risk_level_filter == 'EXTREME' %}selected{% endif %}>EXTREME</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'admin_risk_analysis' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Risk Analysis Table -->
+    <div class="card table-admin">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Risk Analysis Records</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Symbol</th>
+                            <th>Timestamp</th>
+                            <th>Risk Score</th>
+                            <th>Risk Level</th>
+                            <th>VaR (95%)</th>
+                            <th>Sharpe Ratio</th>
+                            <th>Volatility</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for risk in risk_data %}
+                        <tr>
+                            <td>{{ risk.id }}</td>
+                            <td><strong>{{ risk.symbol }}</strong></td>
+                            <td>{{ risk.timestamp|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <span class="badge {% if risk.risk_score >= 70 %}bg-danger{% elif risk.risk_score >= 40 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ risk.risk_score }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if risk.risk_level == 'EXTREME' %}bg-danger{% elif risk.risk_level == 'HIGH' %}bg-orange{% elif risk.risk_level == 'MEDIUM' %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ risk.risk_level }}
+                                </span>
+                            </td>
+                            <td>{{ risk.var_95|default:"-" }}</td>
+                            <td>{{ risk.sharpe_ratio|default:"-" }}</td>
+                            <td>{{ risk.volatility|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No risk analysis data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if risk_data.has_other_pages %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if risk_data.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ risk_data.previous_page_number }}&symbol={{ symbol_filter }}&risk_level={{ risk_level_filter }}">Previous</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ risk_data.number }} of {{ risk_data.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if risk_data.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ risk_data.next_page_number }}&symbol={{ symbol_filter }}&risk_level={{ risk_level_filter }}">Next</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

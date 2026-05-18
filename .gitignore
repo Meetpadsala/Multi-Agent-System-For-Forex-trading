@@ -46,6 +46,10 @@ local_settings.py
 *.h5
 *.pkl
 
+# Environment variables
+.env
+
 # Static and Media (optional - usually not committed for large files)
 # media/
 # staticfiles/
+

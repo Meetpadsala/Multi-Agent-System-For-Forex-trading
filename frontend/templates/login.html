@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - Forex Trading System{% endblock %}
+
+{% block extra_css %}
+<style>
+  body.login-page {
+    background-image: url('{% static "trading/image/forex_image.jpg" %}');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  body.login-page::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+  }
+
+  /* Ensure navbar is visible on login page - above the dark overlay */
+  body.login-page .navbar {
+    background-color: #0d6efd !important;
+    position: relative;
+    z-index: 9999;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<script>
+  document.body.classList.add("login-page");
+</script>
+<div class="register-container container d-flex justify-content-center align-items-center">
+  <div class="row w-100">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-6 mx-auto">
+      <div class="card register-card bg-transparent">
+        <div class="card-header">
+          <h3 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login</h3>
+          <p class="mb-0 mt-2">Welcome back to Forex Trading System</p>
+        </div>
+        <div class="card-body">
+          <form method="post" id="loginForm" novalidate>
+            {% csrf_token %}
+
+            <!-- Username Field -->
+            <div class="mb-3">
+              <label for="{{ form.username.id_for_label }}" class="form-label text-light">Username</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <span class="material-symbols-outlined">person_pin</span>
+                </span>
+                {{ form.username }}
+              </div>
+              {% if form.username.errors %}
+              <div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Password Field -->
+            <div class="mb-3">
+              <label for="{{ form.password.id_for_label }}" class="form-label text-light">Password</label>
+              <div class="input-group">
+                <span class="input-group-text" style="width: 50px;">
+                  <img src="{% static 'trading/image/lock (1).png' %}" width="20px">
+                </span>
+                {{ form.password }}
+              </div>
+              {% if form.password.errors %}
+              <div class="invalid-feedback d-block">{{ form.password.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-register text-white">
+                <i class="fas fa-sign-in-alt me-2"></i>Login
+              </button>
+            </div>
+
+            <!-- Forgot Password & Register Links -->
+            <div class="text-center mt-4">
+              <p class="mb-0">
+                <a href="{% url 'password_reset' %}" class="login-link text-decoration-none">Forgot Password?</a>
+              </p>
+              <p class="mb-0 mt-2 text-light">
+                Don't have an account?
+                <a href="{% url 'register' %}" class="login-link text-decoration-none">Register here</a>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Add form-control class to fields
+  const formFields = ["id_username", "id_password"];
+  formFields.forEach(function (fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.classList.add("form-control");
+    }
+  });
+</script>
+{% endblock %}
