@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  web:  
+    image: forex-trading:latest
+    container_name: app
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: "replace-with-secure-secret"
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: "192.168.29.13"
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./media:/app/media
+      - static_volume:/app/staticfiles
+    restart: unless-stopped
+
+volumes:
+  static_volume:
+    driver: local
