@@ -1,4 +1,4 @@
-    Django==4.2.7
+Django==4.2.7
 djangorestframework==3.14.0
 mysqlclient==2.2.6
 tensorflow==2.20.0
@@ -10,3 +10,4 @@ beautifulsoup4==4.14.3
 lxml==6.0.0
 Pillow==11.0.0
 joblib==1.4.2
+yfinance
