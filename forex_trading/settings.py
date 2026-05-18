@@ -145,3 +145,17 @@ FINNHUB_API_KEY = 'd640hp9r01ql6dj1o1o0d640hp9r01ql6dj1o1og'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email configuration for password reset
+# For development, emails will be printed to console
+# For production, configure with your email provider
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'zeeljhose@gmail.com'
+EMAIL_HOST_PASSWORD = 'tunf lsab kjod vjtg'
+DEFAULT_FROM_EMAIL = 'zeeljhose@gmail.com'
+
+# Site URL for password reset emails
+SITE_URL = 'http://localhost:8000'

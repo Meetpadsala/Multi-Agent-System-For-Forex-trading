@@ -1,0 +1,105 @@
+{% extends 'trading/admin/admin_base.html' %}
+
+{% block title %}Activity Logs - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="fas fa-list-alt"></i> Activity Logs</h2>
+    
+    <!-- Filter Form -->
+    <div class="card table-admin mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Agent</label>
+                    <select name="agent" class="form-select">
+                        <option value="">All Agents</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent }}" {% if agent_filter == agent %}selected{% endif %}>{{ agent }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Search in Actions/Results</label>
+                    <input type="text" name="search" class="form-control" value="{{ search_filter }}" placeholder="Search text...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'admin_logs' %}" class="btn btn-secondary w-100">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Logs Table -->
+    <div class="card table-admin">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Agent Activity Logs</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Agent Name</th>
+                            <th>Action</th>
+                            <th>Result</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.id }}</td>
+                            <td><strong>{{ log.agent_name }}</strong></td>
+                            <td>{{ log.action }}</td>
+                            <td>{{ log.result|truncatechars:100 }}</td>
+                            <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No logs available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if logs.has_other_pages %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if logs.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ logs.previous_page_number }}&agent={{ agent_filter }}&search={{ search_filter }}">Previous</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if logs.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ logs.next_page_number }}&agent={{ agent_filter }}&search={{ search_filter }}">Next</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,86 @@
+{% extends 'trading/base.html' %}
+{% block title %}Dashboard - Forex Trading System{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Specific Styles */
+    .dashboard-container { padding: 0 0.5rem; }
+    
+    /* Stats Cards */
+    .stats-card { border: none; border-radius: 12px; transition: transform 0.2s, box-shadow 0.2s; overflow: hidden; }
+    .stats-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important; }
+    .stats-card .card-body { padding: 1.25rem; }
+    .stats-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .stats-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+    .stats-label { font-size: 0.8rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stats-change { font-size: 0.75rem; font-weight: 600; }
+    .stats-change.positive { color: #28a745; }
+    .stats-change.negative { color: #dc3545; }
+    
+    /* Chart Section */
+    .chart-toolbar { background: #f8f9fa; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .chart-toolbar .form-select, .chart-toolbar .form-control { border-radius: 8px; border: 1px solid #dee2e6; font-size: 0.875rem; }
+    .chart-toolbar .form-select:focus, .chart-toolbar .form-control:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15); }
+    .toolbar-divider { width: 1px; height: 30px; background: #dee2e6; margin: 0 0.25rem; }
+    .mode-toggle { display: flex; align-items: center; gap: 0.5rem; background: white; padding: 0.25rem 0.5rem; border-radius: 8px; border: 1px solid #dee2e6; }
+    .mode-toggle .form-check-input { margin: 0; }
+    .mode-toggle .form-check-label { font-size: 0.8rem; font-weight: 500; cursor: pointer; }
+    .indicator-check { display: flex; align-items: center; gap: 0.25rem; background: white; padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid #dee2e6; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .indicator-check:hover { background: #e9ecef; }
+    .indicator-check.active { background: #e7f1ff; border-color: #0d6efd; color: #0d6efd; }
+    
+    .price-display { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; }
+    .price-main { display: flex; flex-direction: column; }
+    .price-value { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+    .price-pair { font-size: 0.85rem; opacity: 0.9; }
+    .price-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .price-badge { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    
+    /* Sidebar Widgets */
+    .widget-card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); margin-bottom: 1rem; overflow: hidden; }
+    .widget-card:last-child { margin-bottom: 0; }
+    .widget-card .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 0.875rem 1rem; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: space-between; }
+    .widget-card .card-header i { color: #0d6efd; }
+    .widget-card .card-body { padding: 1rem; }
+    
+    /* Decision Widget */
+    .decision-display { text-align: center; padding: 0.5rem; }
+    .decision-badge { display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; border-radius: 50%; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .decision-badge.buy { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+    .decision-badge.sell { background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%); color: white; }
+    .decision-badge.hold { background: linear-gradient(135deg, #ffc107 0%, #ffcd39 100%); color: #212529; }
+    .decision-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+    .decision-stat { background: #f8f9fa; padding: 0.5rem; border-radius: 8px; text-align: center; }
+    .decision-stat-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; }
+    .decision-stat-value { font-size: 1rem; font-weight: 600; color: #212529; }
+    
+    /* Risk Meter Widget */
+    .risk-meter { text-align: center; }
+    .risk-value-display { font-size: 2rem; font-weight: 700; }
+    .risk-level-text { font-size: 0.9rem; font-weight: 600; padding: 0.25rem 1rem; border-radius: 20px; }
+    
+    /* Indicators Widget */
+    .indicators-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .indicator-item { background: #f8f9fa; padding: 0.5rem; border-radius: 8px; text-align: center; }
+    .indicator-item-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; }
+    .indicator-item-value { font-size: 0.9rem; font-weight: 600; color: #212529; }
+    
+    /* Prediction Widget */
+    .prediction-display { text-align: center; }
+    .prediction-price { font-size: 1.75rem; font-weight: 700; color: #212529; }
+    .prediction-trend { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.35rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin: 0.5rem 0; }
+    .prediction-trend.up { background: #d4edda; color: #155724; }
+    .prediction-trend.down { background: #f8d7da; color: #721c24; }
+    .prediction-confidence { font-size: 0.85rem; color: #6c757d; }
+    
+    /* High Risk Alert */
+    .alert-card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); }
+    .alert-card .card-header { background: white; border-bottom: 1px solid #f0f0f0; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+    .risk-pair-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: #fff5f5; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #dc3545; }
+    .risk-pair-item:last-child { margin-bottom: 0; }
+    .risk-pair-symbol { font-weight: 600; }
+    .risk-pair-score { font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; }
+    .risk-pair-score.high { background: #dc3545; color: white; }
+    
+    /* Loading Overlay */
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; z-index: 10; }
