@@ -10,7 +10,7 @@ services:
       DJANGO_SETTINGS_MODULE: "settings"
       DJANGO_SECRET_KEY: "replace-with-secure-secret"
       DJANGO_DEBUG: "0"
-      DJANGO_ALLOWED_HOSTS: "192.168.29.13"
+      DJANGO_ALLOWED_HOSTS: "192.168.29.13,localhost,127.0.0.1"
     volumes:
       - ./db.sqlite3:/app/db.sqlite3
       - ./media:/app/media
