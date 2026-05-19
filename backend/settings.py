@@ -168,7 +168,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'zeeljhose@gmail.com'
-EMAIL_HOST_PASSWORD = 'kbxf qysn ihfx bgdg'
+EMAIL_HOST_PASSWORD = 'kbxfqysnihfxbgdg'
 DEFAULT_FROM_EMAIL = 'zeeljhose@gmail.com'
 
 # Site URL for password reset emails
