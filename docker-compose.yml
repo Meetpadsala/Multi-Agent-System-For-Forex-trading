@@ -1,10 +1,12 @@
 services:
-  web:  
+  web:
     image: forex-trading:latest
     container_name: app
     ports:
       - "8000:8000"
+    command: gunicorn wsgi:application --bind 0.0.0.0:8000
     environment:
+      DJANGO_SETTINGS_MODULE: "settings"
       DJANGO_SECRET_KEY: "replace-with-secure-secret"
       DJANGO_DEBUG: "0"
       DJANGO_ALLOWED_HOSTS: "192.168.29.13"
@@ -13,7 +15,3 @@ services:
       - ./media:/app/media
       - static_volume:/app/staticfiles
     restart: unless-stopped
-
-volumes:
-  static_volume:
-    driver: local
