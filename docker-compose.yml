@@ -1,4 +1,15 @@
 services:
+  db:
+    image: postgres:16
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: forexdb
+      POSTGRES_USER: forexuser
+      POSTGRES_PASSWORD: forexpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   web:
     image: forex-trading:latest
     container_name: app
@@ -6,16 +17,24 @@ services:
       - "8000:8000"
     working_dir: /app/backend
     command: gunicorn wsgi:application --bind 0.0.0.0:8000
+    depends_on:
+      - db
     environment:
       DJANGO_SETTINGS_MODULE: "settings"
       DJANGO_SECRET_KEY: "replace-with-secure-secret"
       DJANGO_DEBUG: "0"
       DJANGO_ALLOWED_HOSTS: "192.168.29.13,localhost,127.0.0.1"
+      DB_NAME: forexdb
+      DB_USER: forexuser
+      DB_PASSWORD: forexpass
+      DB_HOST: db
+      DB_PORT: 5432
     volumes:
-      - ./db.sqlite3:/app/db.sqlite3
-      - ./media:/app/media
+      - media:/app/media
       - static_volume:/app/staticfiles
     restart: unless-stopped
 
 volumes:
+  postgres_data:
+  media:
   static_volume:
