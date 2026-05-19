@@ -134,7 +134,7 @@ timestamp = timezone.now()
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'frontend' / 'static',
+    BASE_DIR / 'frontend' / 'static'/ 'trading',
 ]
 
 
